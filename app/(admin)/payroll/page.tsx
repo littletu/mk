@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { formatDate, formatCurrency, currentYearMonth } from '@/lib/utils/date'
 import { getBiweeklyPeriods } from '@/lib/utils/payroll'
 import { PayrollActions } from '@/components/forms/PayrollActions'
+import { MonthSelector } from '@/components/forms/MonthSelector'
 import Link from 'next/link'
 import { Wallet } from 'lucide-react'
 
@@ -47,20 +48,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">薪資管理</h1>
-        <select
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white"
-          defaultValue={`${year}-${month}`}
-          onChange={e => {
-            const [y, m] = e.target.value.split('-')
-            window.location.href = `/payroll?year=${y}&month=${m}`
-          }}
-        >
-          {monthOptions.map(o => (
-            <option key={`${o.year}-${o.month}`} value={`${o.year}-${o.month}`}>
-              {o.year} 年 {o.month} 月
-            </option>
-          ))}
-        </select>
+        <MonthSelector options={monthOptions} value={`${year}-${month}`} />
       </div>
 
       {periods.map(period => (
