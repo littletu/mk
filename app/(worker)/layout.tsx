@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ClipboardList, History, Wallet, LogOut, PaintBucket } from 'lucide-react'
+import { ClipboardList, History, Wallet } from 'lucide-react'
+import { WorkerHeader } from '@/components/layout/WorkerHeader'
 
 export default async function WorkerLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -19,14 +20,7 @@ export default async function WorkerLayout({ children }: { children: React.React
 
   return (
     <div className="flex flex-col min-h-full bg-gray-50">
-      {/* Mobile top header */}
-      <header className="bg-gray-900 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <PaintBucket className="w-5 h-5 text-orange-400" />
-          <span className="font-bold text-sm">油漆工程管理</span>
-        </div>
-        <span className="text-sm text-gray-300">{profile?.full_name}</span>
-      </header>
+      <WorkerHeader fullName={profile?.full_name ?? ''} />
 
       {/* Content */}
       <main className="flex-1 px-4 py-4 pb-24 max-w-lg mx-auto w-full">
