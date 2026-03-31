@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,11 +42,26 @@ const emptyForm = {
 }
 
 export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) {
+  const [selectedDate, setSelectedDate] = useState(today)
+  const [dateEntries, setDateEntries] = useState<any[]>(todayEntries)
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    if (selectedDate === today) {
+      setDateEntries(todayEntries)
+      return
+    }
+    supabase
+      .from('time_entries')
+      .select('*, project:projects(name)')
+      .eq('worker_id', workerId)
+      .eq('work_date', selectedDate)
+      .then(({ data }) => setDateEntries(data ?? []))
+  }, [selectedDate])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -83,7 +98,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
     const payload = {
       worker_id: workerId,
       project_id: form.project_id,
-      work_date: today,
+      work_date: selectedDate,
       regular_hours: parseFloat(form.regular_hours) || 0,
       overtime_hours: parseFloat(form.overtime_hours) || 0,
       transportation_fee: parseFloat(form.transportation_fee) || 0,
@@ -117,14 +132,31 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
 
   return (
     <div className="space-y-4">
-      {/* Today's existing entries */}
-      {todayEntries.length > 0 && (
+      {/* Date picker */}
+      <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-4 py-3">
+        <Label htmlFor="work_date" className="text-sm font-medium text-gray-700 whitespace-nowrap">選擇日期</Label>
+        <Input
+          id="work_date"
+          type="date"
+          value={selectedDate}
+          max={today}
+          onChange={e => {
+            setSelectedDate(e.target.value)
+            setEditingId(null)
+            setForm(emptyForm)
+          }}
+          className="border-0 shadow-none p-0 h-auto text-sm"
+        />
+      </div>
+
+      {/* Entries for selected date */}
+      {dateEntries.length > 0 && (
         <div className="space-y-2">
           <p className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-green-500" />
-            今日已填記錄（{formatDate(today)}）
+            {formatDate(selectedDate)} 已填記錄
           </p>
-          {todayEntries.map((entry: any) => (
+          {dateEntries.map((entry: any) => (
             <button
               key={entry.id}
               onClick={() => startEdit(entry)}
@@ -149,7 +181,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
             {editingId ? '編輯工時記錄' : (
               <span className="flex items-center gap-1.5">
                 <Plus className="w-4 h-4" />
-                新增今日工時
+                {selectedDate === today ? '新增今日工時' : `新增 ${formatDate(selectedDate)} 工時`}
               </span>
             )}
           </CardTitle>
