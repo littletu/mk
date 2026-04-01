@@ -240,14 +240,14 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                   inputMode="decimal"
                 />
                 <div className="flex gap-1.5">
-                  {[8, 4, 1, 0.5].map(v => (
+                  {[{v: 8, label: '+8 全工'}, {v: 4, label: '+4 半工'}, {v: 1, label: '+1'}, {v: -1, label: '-1'}].map(({v, label}) => (
                     <button
-                      key={v}
+                      key={label}
                       type="button"
                       onClick={() => setForm(p => ({ ...p, regular_hours: String(Math.max(0, (parseFloat(p.regular_hours) || 0) + v)) }))}
-                      className="flex-1 text-xs py-1 rounded-md bg-orange-50 text-orange-600 font-medium hover:bg-orange-100 transition-colors"
+                      className={`flex-1 text-xs py-1 rounded-md font-medium transition-colors ${v > 0 ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                     >
-                      +{v}
+                      {label}
                     </button>
                   ))}
                 </div>
