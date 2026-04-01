@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
@@ -47,6 +47,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingProject, setEditingProject] = useState<Project | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -67,8 +68,9 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  function startEdit(entry: TimeEntry) {
+  function startEdit(entry: any) {
     setEditingId(entry.id)
+    setEditingProject({ id: entry.project_id, name: entry.project?.name ?? entry.project_id, address: null })
     setForm({
       project_id: entry.project_id,
       regular_hours: String(entry.regular_hours || ''),
@@ -85,6 +87,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
 
   function cancelEdit() {
     setEditingId(null)
+    setEditingProject(null)
     setForm(emptyForm)
   }
 
@@ -126,6 +129,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
 
     setForm(emptyForm)
     setEditingId(null)
+    setEditingProject(null)
     setLoading(false)
     router.refresh()
   }
@@ -194,27 +198,34 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
               {projects.length === 0 ? (
                 <p className="text-sm text-gray-500 bg-gray-50 rounded p-3">目前沒有指派工程，請聯絡管理者</p>
               ) : (
-                <Select
+                <select
                   value={form.project_id}
-                  onValueChange={v => setForm(p => ({ ...p, project_id: v ?? '' }))}
+                  onChange={e => setForm(p => ({ ...p, project_id: e.target.value }))}
                   disabled={!!editingId}
+                  className={cn(
+                    'w-full h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none',
+                    'focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+                    'disabled:cursor-not-allowed disabled:opacity-50',
+                    !form.project_id && 'text-muted-foreground'
+                  )}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="選擇今日施工工程" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map(p => (
-                      <SelectItem key={p.id} value={p.id} label={p.name}>
-                        {p.address ? `${p.name}（${p.address}）` : p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <option value="">選擇今日施工工程</option>
+                  {editingProject && !projects.find(p => p.id === editingProject.id) && (
+                    <option key={editingProject.id} value={editingProject.id}>
+                      {editingProject.name}
+                    </option>
+                  )}
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.address ? `${p.name}（${p.address}）` : p.name}
+                    </option>
+                  ))}
+                </select>
               )}
             </div>
 
             {/* Hours */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="regular_hours">工作時間（小時）</Label>
                 <Input
@@ -228,6 +239,18 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                   step="0.5"
                   inputMode="decimal"
                 />
+                <div className="flex gap-1.5">
+                  {[8, 4, 1, 0.5].map(v => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setForm(p => ({ ...p, regular_hours: String(Math.max(0, (parseFloat(p.regular_hours) || 0) + v)) }))}
+                      className="flex-1 text-xs py-1 rounded-md bg-orange-50 text-orange-600 font-medium hover:bg-orange-100 transition-colors"
+                    >
+                      +{v}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="overtime_hours">加班時數（小時）</Label>
@@ -242,6 +265,18 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                   step="0.5"
                   inputMode="decimal"
                 />
+                <div className="flex gap-1.5">
+                  {[{v: 1, label: '+1'}, {v: -1, label: '-1'}, {v: 0.5, label: '+0.5'}, {v: -0.5, label: '-0.5'}].map(({v, label}) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setForm(p => ({ ...p, overtime_hours: String(Math.max(0, (parseFloat(p.overtime_hours) || 0) + v)) }))}
+                      className={`flex-1 text-xs py-1 rounded-md font-medium transition-colors ${v > 0 ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
