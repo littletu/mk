@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { formatDate } from '@/lib/utils/date'
-import { CheckCircle2, Plus } from 'lucide-react'
+import { CheckCircle2, Plus, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 import type { TimeEntry } from '@/types'
 
 interface Project {
@@ -30,7 +30,7 @@ interface Props {
 
 const emptyForm = {
   project_id: '',
-  regular_hours: '',
+  regular_days: '',
   overtime_hours: '',
   transportation_fee: '',
   meal_fee: '',
@@ -41,9 +41,21 @@ const emptyForm = {
   work_progress: '',
 }
 
+const DAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
+
+function getWeekStart(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return d.toISOString().split('T')[0]
+}
+
 export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) {
   const [selectedDate, setSelectedDate] = useState(today)
+  const [weekStart, setWeekStart] = useState(() => getWeekStart(today))
   const [dateEntries, setDateEntries] = useState<any[]>(todayEntries)
+  const calendarRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -73,7 +85,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
     setEditingProject({ id: entry.project_id, name: entry.project?.name ?? entry.project_id, address: null })
     setForm({
       project_id: entry.project_id,
-      regular_hours: String(entry.regular_hours || ''),
+      regular_days: String(entry.regular_days || ''),
       overtime_hours: String(entry.overtime_hours || ''),
       transportation_fee: String(entry.transportation_fee || ''),
       meal_fee: String(entry.meal_fee || ''),
@@ -94,15 +106,15 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.project_id) { toast.error('請選擇工程'); return }
-    const regularHours = parseFloat(form.regular_hours) || 0
-    if (regularHours <= 0 && !editingId) { toast.error('請輸入工作時間'); return }
+    const regularDays = parseFloat(form.regular_days) || 0
+    if (regularDays <= 0 && !editingId) { toast.error('請輸入工數'); return }
 
     setLoading(true)
     const payload = {
       worker_id: workerId,
       project_id: form.project_id,
       work_date: selectedDate,
-      regular_hours: parseFloat(form.regular_hours) || 0,
+      regular_days: parseFloat(form.regular_days) || 0,
       overtime_hours: parseFloat(form.overtime_hours) || 0,
       transportation_fee: parseFloat(form.transportation_fee) || 0,
       meal_fee: parseFloat(form.meal_fee) || 0,
@@ -136,22 +148,111 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
 
   return (
     <div className="space-y-4">
-      {/* Date picker */}
-      <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-4 py-3">
-        <Label htmlFor="work_date" className="text-sm font-medium text-gray-700 whitespace-nowrap">選擇日期</Label>
-        <Input
-          id="work_date"
-          type="date"
-          value={selectedDate}
-          max={today}
-          onChange={e => {
-            setSelectedDate(e.target.value)
-            setEditingId(null)
-            setForm(emptyForm)
-          }}
-          className="border-0 shadow-none p-0 h-auto text-sm"
-        />
-      </div>
+      {/* Week Date Picker */}
+      {(() => {
+        const weekDays = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(weekStart + 'T12:00:00')
+          d.setDate(d.getDate() + i)
+          return d.toISOString().split('T')[0]
+        })
+        const canGoNext = (() => {
+          const d = new Date(weekStart + 'T12:00:00')
+          d.setDate(d.getDate() + 7)
+          return d.toISOString().split('T')[0] <= today
+        })()
+        const weekLabel = `${weekDays[0].slice(5).replace('-', '/')} ~ ${weekDays[6].slice(5).replace('-', '/')}`
+        return (
+          <div className="bg-white rounded-xl border border-gray-200 p-3">
+            <div className="flex items-center justify-between mb-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const d = new Date(weekStart + 'T12:00:00')
+                  d.setDate(d.getDate() - 7)
+                  setWeekStart(d.toISOString().split('T')[0])
+                }}
+                className="p-1.5 rounded-lg hover:bg-gray-100 active:bg-gray-200"
+              >
+                <ChevronLeft className="w-4 h-4 text-gray-600" />
+              </button>
+              <span className="text-xs text-gray-500 font-medium">{weekLabel}</span>
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  className="p-1.5 rounded-lg hover:bg-gray-100 active:bg-gray-200 relative"
+                  onClick={() => calendarRef.current?.showPicker?.()}
+                >
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <input
+                    ref={calendarRef}
+                    type="date"
+                    max={today}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    onChange={e => {
+                      if (!e.target.value) return
+                      setSelectedDate(e.target.value)
+                      setWeekStart(getWeekStart(e.target.value))
+                      setEditingId(null)
+                      setForm(emptyForm)
+                    }}
+                  />
+                </button>
+                <button
+                  type="button"
+                  disabled={!canGoNext}
+                  onClick={() => {
+                    const d = new Date(weekStart + 'T12:00:00')
+                    d.setDate(d.getDate() + 7)
+                    setWeekStart(d.toISOString().split('T')[0])
+                  }}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 active:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4 text-gray-600" />
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {weekDays.map(date => {
+                const d = new Date(date + 'T12:00:00')
+                const dow = d.getDay()
+                const isSelected = date === selectedDate
+                const isFuture = date > today
+                const isToday = date === today
+                return (
+                  <button
+                    key={date}
+                    type="button"
+                    disabled={isFuture}
+                    onClick={() => {
+                      setSelectedDate(date)
+                      setEditingId(null)
+                      setForm(emptyForm)
+                    }}
+                    className={cn(
+                      'flex flex-col items-center py-2 rounded-lg text-xs transition-colors',
+                      isSelected
+                        ? 'bg-orange-500 text-white'
+                        : isToday
+                        ? 'bg-orange-50 text-orange-600'
+                        : isFuture
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : 'hover:bg-gray-100 text-gray-700'
+                    )}
+                  >
+                    <span className={cn(
+                      'text-[10px] mb-0.5',
+                      isSelected ? 'text-orange-100' : dow === 0 ? 'text-red-400' : dow === 6 ? 'text-blue-400' : 'text-gray-400'
+                    )}>
+                      {DAY_LABELS[dow]}
+                    </span>
+                    <span className="font-semibold">{d.getDate()}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Entries for selected date */}
       {dateEntries.length > 0 && (
@@ -171,7 +272,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                 <Badge variant="secondary" className="text-xs">點擊編輯</Badge>
               </div>
               <p className="text-xs text-gray-600 mt-1">
-                正常 {entry.regular_hours}h ／ 加班 {entry.overtime_hours}h
+                工作 {entry.regular_days}天 ／ 加班 {entry.overtime_hours}h
               </p>
             </button>
           ))}
@@ -209,7 +310,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                     !form.project_id && 'text-muted-foreground'
                   )}
                 >
-                  <option value="">選擇今日施工工程</option>
+                  <option value="">選取施工工程</option>
                   {editingProject && !projects.find(p => p.id === editingProject.id) && (
                     <option key={editingProject.id} value={editingProject.id}>
                       {editingProject.name}
@@ -224,15 +325,15 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
               )}
             </div>
 
-            {/* Hours */}
+            {/* Days & Overtime */}
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="regular_hours">工作時間（小時）</Label>
+                <Label htmlFor="regular_days">工數</Label>
                 <Input
-                  id="regular_hours"
-                  name="regular_hours"
+                  id="regular_days"
+                  name="regular_days"
                   type="number"
-                  value={form.regular_hours}
+                  value={form.regular_days}
                   onChange={handleChange}
                   placeholder="0"
                   min="0"
@@ -240,11 +341,11 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                   inputMode="decimal"
                 />
                 <div className="flex gap-1.5">
-                  {[{v: 8, label: '+8 全工'}, {v: 4, label: '+4 半工'}, {v: 1, label: '+1'}, {v: -1, label: '-1'}].map(({v, label}) => (
+                  {[{v: 1, label: '1天'}, {v: 0.5, label: '0.5天'}, {v: -0.5, label: '-0.5'}, {v: -1, label: '-1'}].map(({v, label}) => (
                     <button
                       key={label}
                       type="button"
-                      onClick={() => setForm(p => ({ ...p, regular_hours: String(Math.max(0, (parseFloat(p.regular_hours) || 0) + v)) }))}
+                      onClick={() => setForm(p => ({ ...p, regular_days: String(Math.max(0, (parseFloat(p.regular_days) || 0) + v)) }))}
                       className={`flex-1 text-xs py-1 rounded-md font-medium transition-colors ${v > 0 ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                     >
                       {label}
@@ -363,7 +464,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                 name="work_progress"
                 value={form.work_progress}
                 onChange={handleChange}
-                placeholder="今日施工進度、現場狀況、注意事項..."
+                placeholder="今日施工進度、現場狀況、注意事項、費用說明..."
                 rows={3}
               />
             </div>

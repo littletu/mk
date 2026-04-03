@@ -36,7 +36,7 @@ export default async function TimeReportsPage({
 
   const { data: entries } = await query
 
-  const totalRegular = entries?.reduce((s, e) => s + (e.regular_hours || 0), 0) ?? 0
+  const totalRegular = entries?.reduce((s, e) => s + (e.regular_days || 0), 0) ?? 0
   const totalOvertime = entries?.reduce((s, e) => s + (e.overtime_hours || 0), 0) ?? 0
   const totalFees = entries?.reduce((s, e) =>
     s + (e.transportation_fee || 0) + (e.meal_fee || 0) + (e.advance_payment || 0) + (e.subsidy || 0) + (e.other_fee || 0), 0) ?? 0
@@ -57,8 +57,8 @@ export default async function TimeReportsPage({
       <div className="grid grid-cols-3 gap-4 my-6">
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-xs text-gray-500 mb-1">正常工時</p>
-            <p className="text-xl font-bold text-gray-900">{totalRegular}h</p>
+            <p className="text-xs text-gray-500 mb-1">工數</p>
+            <p className="text-xl font-bold text-gray-900">{totalRegular}天</p>
           </CardContent>
         </Card>
         <Card>
@@ -88,7 +88,7 @@ export default async function TimeReportsPage({
                   <th className="text-left px-4 py-3 font-medium text-gray-600">日期</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">師傅</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">工程</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600">正常</th>
+                  <th className="text-right px-4 py-3 font-medium text-gray-600">天數</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">加班</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">交通</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">餐費</th>
@@ -103,7 +103,7 @@ export default async function TimeReportsPage({
                     <td className="px-4 py-3 whitespace-nowrap">{formatDate(entry.work_date)}</td>
                     <td className="px-4 py-3">{entry.worker?.profile?.full_name}</td>
                     <td className="px-4 py-3">{entry.project?.name}</td>
-                    <td className="px-4 py-3 text-right">{entry.regular_hours}h</td>
+                    <td className="px-4 py-3 text-right">{entry.regular_days}天</td>
                     <td className="px-4 py-3 text-right text-orange-600">{entry.overtime_hours > 0 ? `${entry.overtime_hours}h` : '—'}</td>
                     <td className="px-4 py-3 text-right">{entry.transportation_fee > 0 ? formatCurrency(entry.transportation_fee) : '—'}</td>
                     <td className="px-4 py-3 text-right">{entry.meal_fee > 0 ? formatCurrency(entry.meal_fee) : '—'}</td>

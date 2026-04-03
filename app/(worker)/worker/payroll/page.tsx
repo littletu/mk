@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils/date'
-import { Wallet } from 'lucide-react'
+import { Wallet, ChevronRight } from 'lucide-react'
 
 const statusLabel: Record<string, string> = {
   draft: '待確認', confirmed: '已確認', paid: '已發薪',
@@ -17,7 +18,7 @@ export default async function WorkerPayrollPage() {
 
   const { data: worker } = await supabase
     .from('workers')
-    .select('id, hourly_rate, overtime_rate')
+    .select('id, daily_rate, overtime_rate')
     .eq('profile_id', user!.id)
     .single()
 
@@ -34,7 +35,7 @@ export default async function WorkerPayrollPage() {
       <div className="mb-5">
         <h1 className="text-xl font-bold text-gray-900">我的薪資</h1>
         <div className="flex gap-3 mt-2 text-xs text-gray-500">
-          <span>時薪：{formatCurrency(worker.hourly_rate)}</span>
+          <span>日薪：{formatCurrency(worker.daily_rate)}</span>
           <span>加班時薪：{formatCurrency(worker.overtime_rate)}</span>
         </div>
       </div>
@@ -66,9 +67,9 @@ export default async function WorkerPayrollPage() {
 
                 <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                   <div className="bg-gray-50 rounded p-2">
-                    <p className="text-gray-400 mb-0.5">正常工時薪資</p>
+                    <p className="text-gray-400 mb-0.5">日薪薪資</p>
                     <p className="font-medium text-gray-800">{formatCurrency(record.regular_amount)}</p>
-                    <p className="text-gray-400">{record.regular_hours}h</p>
+                    <p className="text-gray-400">{record.regular_days}天</p>
                   </div>
                   <div className="bg-gray-50 rounded p-2">
                     <p className="text-gray-400 mb-0.5">加班薪資</p>
@@ -119,6 +120,14 @@ export default async function WorkerPayrollPage() {
                 {record.confirmed_at && (
                   <p className="text-xs text-gray-400">確認時間：{formatDate(record.confirmed_at)}</p>
                 )}
+
+                <Link
+                  href={`/worker/payroll/${record.id}`}
+                  className="flex items-center justify-center gap-1 w-full mt-1 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 text-xs font-medium text-gray-600 transition-colors"
+                >
+                  查看每日明細
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </CardContent>
             </Card>
           ))}

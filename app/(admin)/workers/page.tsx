@@ -55,7 +55,7 @@ export default async function WorkersPage() {
                       </div>
                     )}
                     <div className="flex justify-between mt-2 pt-2 border-t border-gray-100">
-                      <span>時薪：<span className="font-medium text-gray-900">{formatCurrency(worker.hourly_rate)}</span></span>
+                      <span>日薪：<span className="font-medium text-gray-900">{formatCurrency(worker.daily_rate)}</span></span>
                       <span>加班：<span className="font-medium text-gray-900">{formatCurrency(worker.overtime_rate)}</span></span>
                     </div>
                   </div>

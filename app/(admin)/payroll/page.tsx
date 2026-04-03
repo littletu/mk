@@ -26,8 +26,8 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
 
   const { data: workers } = await supabase
     .from('workers')
-    .select('id, hourly_rate, overtime_rate, profile:profiles(full_name)')
-    .eq('is_active', true) as { data: Array<{ id: string; hourly_rate: number; overtime_rate: number; profile: any }> | null }
+    .select('id, daily_rate, overtime_rate, profile:profiles(full_name)')
+    .eq('is_active', true) as { data: Array<{ id: string; daily_rate: number; overtime_rate: number; profile: any }> | null }
 
   // Load payroll records for this month
   const { data: records } = await supabase
@@ -71,14 +71,14 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
                     <div>
                       <p className="font-medium text-sm">{(worker.profile as any)?.full_name}</p>
                       <p className="text-xs text-gray-500">
-                        時薪 {formatCurrency(worker.hourly_rate)} ／ 加班 {formatCurrency(worker.overtime_rate)}
+                        日薪 {formatCurrency(worker.daily_rate)} ／ 加班時薪 {formatCurrency(worker.overtime_rate)}
                       </p>
                     </div>
                     {record ? (
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           <p className="font-bold text-orange-600">{formatCurrency(record.net_amount)}</p>
-                          <p className="text-xs text-gray-500">{record.regular_hours}h 正常 ＋ {record.overtime_hours}h 加班</p>
+                          <p className="text-xs text-gray-500">{record.regular_days}天 ＋ {record.overtime_hours}h 加班</p>
                         </div>
                         <Link href={`/payroll/${record.id}`}>
                           <Badge variant={statusVariant[record.status]} className="cursor-pointer">

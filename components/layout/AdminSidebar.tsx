@@ -13,7 +13,6 @@ import {
   BookOpen,
   Receipt,
   LogOut,
-  PaintBucket,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -43,8 +42,7 @@ export function AdminSidebar() {
   return (
     <aside className="flex flex-col w-64 min-h-screen bg-gray-900 text-white">
       <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-700">
-        <PaintBucket className="w-6 h-6 text-orange-400" />
-        <span className="font-bold text-lg leading-tight">油漆工程管理</span>
+        <span className="font-bold text-lg leading-tight">妙根塗裝</span>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">

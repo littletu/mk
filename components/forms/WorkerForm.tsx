@@ -27,7 +27,7 @@ export function WorkerForm({ worker }: Props) {
     email: '',
     password: '',
     // Worker fields
-    hourly_rate: worker?.hourly_rate?.toString() ?? '',
+    daily_rate: worker?.daily_rate?.toString() ?? '',
     overtime_rate: worker?.overtime_rate?.toString() ?? '',
     bank_account: worker?.bank_account ?? '',
     notes: worker?.notes ?? '',
@@ -50,7 +50,7 @@ export function WorkerForm({ worker }: Props) {
       // Update worker rates + profile
       const [workerRes, profileRes] = await Promise.all([
         supabase.from('workers').update({
-          hourly_rate: parseFloat(form.hourly_rate) || 0,
+          daily_rate: parseFloat(form.daily_rate) || 0,
           overtime_rate: parseFloat(form.overtime_rate) || 0,
           bank_account: form.bank_account || null,
           notes: form.notes || null,
@@ -79,7 +79,7 @@ export function WorkerForm({ worker }: Props) {
           phone: form.phone,
           email: form.email,
           password: form.password,
-          hourly_rate: parseFloat(form.hourly_rate) || 0,
+          daily_rate: parseFloat(form.daily_rate) || 0,
           overtime_rate: parseFloat(form.overtime_rate) || 0,
           bank_account: form.bank_account,
           notes: form.notes,
@@ -124,8 +124,8 @@ export function WorkerForm({ worker }: Props) {
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="hourly_rate">時薪（NT$）*</Label>
-              <Input id="hourly_rate" name="hourly_rate" type="number" value={form.hourly_rate} onChange={handleChange} placeholder="例：200" min="0" step="1" required />
+              <Label htmlFor="daily_rate">日薪（NT$）*</Label>
+              <Input id="daily_rate" name="daily_rate" type="number" value={form.daily_rate} onChange={handleChange} placeholder="例：2000" min="0" step="1" required />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="overtime_rate">加班時薪（NT$）*</Label>

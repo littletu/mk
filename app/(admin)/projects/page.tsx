@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { Plus, FolderOpen, MapPin, DollarSign } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils/date'
+import { ProjectFilters } from '@/components/forms/ProjectFilters'
 
 const statusLabel: Record<string, string> = {
   pending: '待開工', active: '進行中', completed: '已完工', cancelled: '已取消',
@@ -13,33 +14,65 @@ const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'o
   pending: 'outline', active: 'default', completed: 'secondary', cancelled: 'destructive',
 }
 
-export default async function ProjectsPage() {
+interface SearchParams {
+  status?: string
+  customer_id?: string
+  q?: string
+}
+
+export default async function ProjectsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const sp = await searchParams
   const supabase = await createClient()
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('*, customer:customers(name)')
-    .order('created_at', { ascending: false })
+
+  const [{ data: allProjects }, { data: customers }] = await Promise.all([
+    supabase.from('projects').select('*, customer:customers(name, id)').order('created_at', { ascending: false }),
+    supabase.from('customers').select('id, name').order('name'),
+  ])
+
+  // Client-side filtering
+  let projects = allProjects ?? []
+
+  if (sp.status) {
+    projects = projects.filter(p => p.status === sp.status)
+  }
+  if (sp.customer_id) {
+    projects = projects.filter(p => (p.customer as any)?.id === sp.customer_id)
+  }
+  if (sp.q) {
+    const q = sp.q.toLowerCase()
+    projects = projects.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.address ?? '').toLowerCase().includes(q)
+    )
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">工程管理</h1>
-          <p className="text-sm text-gray-500 mt-1">共 {projects?.length ?? 0} 筆工程</p>
         </div>
         <Link href="/projects/new">
           <Button><Plus className="w-4 h-4 mr-2" />新增工程</Button>
         </Link>
       </div>
 
-      {!projects?.length ? (
+      <ProjectFilters
+        customers={customers ?? []}
+        total={allProjects?.length ?? 0}
+        filtered={projects.length}
+      />
+
+      {!projects.length ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-gray-500">
             <FolderOpen className="w-10 h-10 mb-3 opacity-40" />
-            <p>尚無工程資料</p>
-            <Link href="/projects/new" className="mt-3">
-              <Button variant="outline" size="sm">新增第一筆工程</Button>
-            </Link>
+            <p>{allProjects?.length ? '沒有符合條件的工程' : '尚無工程資料'}</p>
+            {!allProjects?.length && (
+              <Link href="/projects/new" className="mt-3">
+                <Button variant="outline" size="sm">新增第一筆工程</Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
       ) : (

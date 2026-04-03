@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, currentYearMonth } from '@/lib/utils/date'
 import { TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react'
+import MonthSelector from './MonthSelector'
 
 interface SearchParams { year?: string; month?: string }
 
@@ -55,20 +56,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">帳目總覽</h1>
-        <select
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white"
-          defaultValue={`${year}-${month}`}
-          onChange={e => {
-            const [y, m] = e.target.value.split('-')
-            window.location.href = `/accounting?year=${y}&month=${m}`
-          }}
-        >
-          {monthOptions.map(o => (
-            <option key={`${o.year}-${o.month}`} value={`${o.year}-${o.month}`}>
-              {o.year} 年 {o.month} 月
-            </option>
-          ))}
-        </select>
+        <MonthSelector value={`${year}-${month}`} options={monthOptions} />
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-6 sm:grid-cols-4">

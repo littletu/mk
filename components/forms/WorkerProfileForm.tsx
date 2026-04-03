@@ -145,11 +145,6 @@ export function WorkerProfileForm({
                 <Input id="mobile" name="mobile" type="tel" value={profile.mobile} onChange={handleChange} placeholder="09xxxxxxxx" />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="phone">電話</Label>
-                <Input id="phone" name="phone" type="tel" value={profile.phone} onChange={handleChange} placeholder="市話" />
-              </div>
-
               <div className="space-y-1.5 col-span-2">
                 <Label htmlFor="address">地址</Label>
                 <Input id="address" name="address" value={profile.address} onChange={handleChange} placeholder="戶籍地址" />

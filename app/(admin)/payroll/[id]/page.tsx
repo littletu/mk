@@ -18,7 +18,7 @@ export default async function PayrollDetailPage({ params }: { params: Promise<{ 
 
   const { data: record } = await supabase
     .from('payroll_records')
-    .select('*, worker:workers(hourly_rate, overtime_rate, profile:profiles(full_name))')
+    .select('*, worker:workers(daily_rate, overtime_rate, profile:profiles(full_name))')
     .eq('id', id)
     .single()
 
@@ -63,10 +63,10 @@ export default async function PayrollDetailPage({ params }: { params: Promise<{ 
 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between py-2 border-b border-gray-50">
-              <span className="text-gray-600">正常工時薪資</span>
+              <span className="text-gray-600">日薪薪資</span>
               <div className="text-right">
                 <span className="font-medium">{formatCurrency(record.regular_amount)}</span>
-                <span className="text-xs text-gray-400 ml-2">{record.regular_hours}h × {formatCurrency(worker?.hourly_rate)}</span>
+                <span className="text-xs text-gray-400 ml-2">{record.regular_days}天 × {formatCurrency(worker?.daily_rate)}</span>
               </div>
             </div>
             <div className="flex justify-between py-2 border-b border-gray-50">
@@ -122,41 +122,41 @@ export default async function PayrollDetailPage({ params }: { params: Promise<{ 
           {entries && entries.length > 0 && (
             <div>
               <p className="text-sm font-medium text-gray-700 mb-2">每日工時明細</p>
-              <div className="rounded-lg border border-gray-100 overflow-hidden">
-                <table className="w-full text-xs">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="text-left px-3 py-2 font-medium text-gray-500">日期</th>
-                      <th className="text-left px-3 py-2 font-medium text-gray-500">工程</th>
-                      <th className="text-right px-3 py-2 font-medium text-gray-500">正常</th>
-                      <th className="text-right px-3 py-2 font-medium text-gray-500">加班</th>
-                      <th className="text-right px-3 py-2 font-medium text-gray-500">其他</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {entries.map((entry: any) => {
-                      const extras = (entry.transportation_fee || 0) + (entry.meal_fee || 0) +
-                        (entry.advance_payment || 0) + (entry.subsidy || 0) + (entry.other_fee || 0)
-                      return (
-                        <tr key={entry.id} className="hover:bg-gray-50">
-                          <td className="px-3 py-2 text-gray-700">{formatDate(entry.work_date)}</td>
-                          <td className="px-3 py-2 text-gray-600 max-w-[100px] truncate">{(entry.project as any)?.name ?? '—'}</td>
-                          <td className="px-3 py-2 text-right">{entry.regular_hours}h</td>
-                          <td className="px-3 py-2 text-right">{entry.overtime_hours > 0 ? `${entry.overtime_hours}h` : '—'}</td>
-                          <td className="px-3 py-2 text-right">{extras > 0 ? formatCurrency(extras) : '—'}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                  <tfoot className="bg-gray-50 font-medium">
-                    <tr>
-                      <td colSpan={2} className="px-3 py-2 text-gray-600">合計</td>
-                      <td className="px-3 py-2 text-right">{record.regular_hours}h</td>
-                      <td className="px-3 py-2 text-right">{record.overtime_hours > 0 ? `${record.overtime_hours}h` : '—'}</td>
-                      <td className="px-3 py-2 text-right"></td>
-                    </tr>
-                  </tfoot>
-                </table>
+              <div className="space-y-2">
+                {entries.map((entry: any) => {
+                  const fees = [
+                    { label: '交通費', value: entry.transportation_fee },
+                    { label: '餐費', value: entry.meal_fee },
+                    { label: '代墊費', value: entry.advance_payment },
+                    { label: '補貼', value: entry.subsidy },
+                    { label: '其他費用', value: entry.other_fee },
+                  ].filter(f => f.value > 0)
+                  return (
+                    <div key={entry.id} className="rounded-lg border border-gray-100 bg-gray-50/50 px-3 py-2.5 text-xs">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="font-medium text-gray-800">{formatDate(entry.work_date)}</span>
+                        <span className="text-gray-500 truncate max-w-[140px] text-right">{(entry.project as any)?.name ?? '—'}</span>
+                      </div>
+                      <div className="flex gap-4 text-gray-600">
+                        <span>工數 <span className="font-medium text-gray-800">{entry.regular_days}天</span></span>
+                        {entry.overtime_hours > 0 && (
+                          <span>加班 <span className="font-medium text-gray-800">{entry.overtime_hours}h</span></span>
+                        )}
+                      </div>
+                      {fees.length > 0 && (
+                        <div className="mt-1.5 pt-1.5 border-t border-gray-200 flex flex-wrap gap-x-4 gap-y-1 text-gray-600">
+                          {fees.map(f => (
+                            <span key={f.label}>{f.label} <span className="font-medium text-gray-800">{formatCurrency(f.value)}</span></span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                <div className="flex justify-between px-3 py-2 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg">
+                  <span>合計工時</span>
+                  <span>合計 {record.regular_days}天　加班 {record.overtime_hours}h</span>
+                </div>
               </div>
             </div>
           )}

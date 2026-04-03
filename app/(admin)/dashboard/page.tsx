@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     supabase.from('projects').select('name, contract_amount, status, customer:customers(name)').eq('status', 'active').limit(5),
     supabase.from('time_entries').select('worker:workers(profile:profiles(full_name)), regular_hours, overtime_hours').eq('work_date', today),
     supabase.from('payroll_records').select('id, worker:workers(profile:profiles(full_name)), net_amount, period_start, period_end').eq('status', 'draft').limit(5),
-    supabase.from('time_entries').select('work_date, work_progress, worker:workers(profile:profiles(full_name)), project:projects(name)').not('work_progress', 'is', null).order('submitted_at', { ascending: false }).limit(8),
+    supabase.from('time_entries').select('id, work_date, work_progress, worker:workers(profile:profiles(full_name)), project:projects(name)').not('work_progress', 'is', null).order('submitted_at', { ascending: false }).limit(8),
   ])
 
   return (
@@ -167,19 +167,23 @@ export default async function DashboardPage() {
             <div className="space-y-3">
               {!recentProgress?.length ? (
                 <p className="text-sm text-gray-400 text-center py-4">尚無施工概況記錄</p>
-              ) : recentProgress.map((entry: any) => (
-                <div key={entry.id} className="border border-gray-100 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-800">{(entry.worker as any)?.profile?.full_name}</span>
-                      <span className="text-xs text-gray-400">｜</span>
-                      <span className="text-xs text-gray-500">{(entry.project as any)?.name}</span>
+              ) : (
+                <>
+                  {recentProgress.map((entry: any) => (
+                    <div key={entry.id} className="border border-gray-100 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-800">{(entry.worker as any)?.profile?.full_name}</span>
+                          <span className="text-xs text-gray-400">｜</span>
+                          <span className="text-xs text-gray-500">{(entry.project as any)?.name}</span>
+                        </div>
+                        <span className="text-xs text-gray-400">{formatDate(entry.work_date)}</span>
+                      </div>
+                      <p className="text-sm text-gray-600 leading-relaxed">{entry.work_progress}</p>
                     </div>
-                    <span className="text-xs text-gray-400">{formatDate(entry.work_date)}</span>
-                  </div>
-                  <p className="text-sm text-gray-600 leading-relaxed">{entry.work_progress}</p>
-                </div>
-              ))}
+                  ))}
+                </>
+              )}
             </div>
           </CardContent>
         </Card>

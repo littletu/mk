@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   if (profile?.role !== 'admin') return NextResponse.json({ error: '權限不足' }, { status: 403 })
 
   const body = await request.json()
-  const { full_name, phone, email, password, hourly_rate, overtime_rate, bank_account, notes } = body
+  const { full_name, phone, email, password, daily_rate, overtime_rate, bank_account, notes } = body
 
   if (!email || !password || !full_name) {
     return NextResponse.json({ error: '缺少必要欄位' }, { status: 400 })
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   // Create worker record
   const { data: workerData, error: workerError } = await adminClient.from('workers').insert({
     profile_id: newUser.user.id,
-    hourly_rate: hourly_rate || 0,
+    daily_rate: daily_rate || 0,
     overtime_rate: overtime_rate || 0,
     bank_account: bank_account || null,
     notes: notes || null,

@@ -54,7 +54,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   <div>
                     <p className="font-medium text-sm">{a.worker?.profile?.full_name}</p>
                     <p className="text-xs text-gray-500">
-                      時薪 {formatCurrency(a.worker?.hourly_rate)} ／ 加班 {formatCurrency(a.worker?.overtime_rate)}
+                      日薪 {formatCurrency(a.worker?.daily_rate)} ／ 加班 {formatCurrency(a.worker?.overtime_rate)}
                     </p>
                   </div>
                   <Badge variant="secondary">已指派</Badge>

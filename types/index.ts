@@ -17,7 +17,7 @@ export interface Profile {
 export interface Worker {
   id: string
   profile_id: string
-  hourly_rate: number
+  daily_rate: number
   overtime_rate: number
   bank_account: string | null
   notes: string | null
@@ -63,7 +63,7 @@ export interface TimeEntry {
   worker_id: string
   project_id: string
   work_date: string
-  regular_hours: number
+  regular_days: number
   overtime_hours: number
   transportation_fee: number
   meal_fee: number
@@ -94,7 +94,7 @@ export interface PayrollRecord {
   worker_id: string
   period_start: string
   period_end: string
-  regular_hours: number
+  regular_days: number
   overtime_hours: number
   regular_amount: number
   overtime_amount: number
