@@ -1,6 +1,8 @@
-CREATE TYPE invoice_status AS ENUM ('draft', 'sent', 'paid', 'cancelled');
+-- Invoice status enum
+CREATE TYPE IF NOT EXISTS invoice_status AS ENUM ('draft', 'sent', 'paid', 'cancelled');
 
-CREATE TABLE invoices (
+-- Invoices table
+CREATE TABLE IF NOT EXISTS invoices (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   invoice_number TEXT UNIQUE NOT NULL,
   customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
@@ -18,7 +20,8 @@ CREATE TABLE invoices (
   paid_at TIMESTAMPTZ
 );
 
-CREATE TABLE invoice_items (
+-- Invoice line items
+CREATE TABLE IF NOT EXISTS invoice_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
   description TEXT NOT NULL,
@@ -31,13 +34,11 @@ CREATE TABLE invoice_items (
 -- RLS
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoice_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Admins can manage invoices" ON invoices FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
-CREATE POLICY "Admins can manage invoice items" ON invoice_items FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
--- Auto-generate invoice number
-CREATE SEQUENCE IF NOT EXISTS invoice_seq START 1;
-CREATE OR REPLACE FUNCTION generate_invoice_number() RETURNS TEXT LANGUAGE plpgsql AS $$
-BEGIN
-  RETURN 'INV-' || TO_CHAR(NOW(), 'YYYY') || '-' || LPAD(nextval('invoice_seq')::TEXT, 4, '0');
-END;
-$$;
+CREATE POLICY "Admins can manage invoices"
+  ON invoices FOR ALL
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+CREATE POLICY "Admins can manage invoice items"
+  ON invoice_items FOR ALL
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));

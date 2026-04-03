@@ -18,11 +18,14 @@ export async function POST(request: Request) {
   const body = await request.json()
   const { customer_id, project_id, issue_date, due_date, tax_rate, notes, items } = body
 
-  // Generate invoice number
-  const { data: numData, error: numError } = await supabase
-    .rpc('generate_invoice_number')
-  if (numError) return NextResponse.json({ error: numError.message }, { status: 500 })
-  const invoice_number = numData as string
+  // Generate invoice number (application-side, no RPC needed)
+  const year = new Date().getFullYear()
+  const { count } = await supabase
+    .from('invoices')
+    .select('*', { count: 'exact', head: true })
+    .like('invoice_number', `INV-${year}-%`)
+  const seq = ((count ?? 0) + 1).toString().padStart(4, '0')
+  const invoice_number = `INV-${year}-${seq}`
 
   // Calculate totals
   const subtotal: number = (items as Array<{ amount: number }>).reduce((s, it) => s + (it.amount || 0), 0)
