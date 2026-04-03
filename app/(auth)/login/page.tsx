@@ -59,7 +59,6 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard')
       }
-      router.refresh()
     } catch (e) {
       console.error('Login error:', e)
       toast.error('登入失敗：' + (e instanceof Error ? e.message : '請稍後再試'))
