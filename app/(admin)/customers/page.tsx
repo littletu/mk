@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
-import { Plus, User, Phone, MapPin } from 'lucide-react'
+import { Plus, User, Phone, MapPin, Hash } from 'lucide-react'
 import type { Customer } from '@/types'
 
 export default async function CustomersPage() {
@@ -65,6 +65,12 @@ export default async function CustomersPage() {
                       <div className="flex items-center gap-2">
                         <MapPin className="w-3.5 h-3.5 shrink-0" />
                         <span className="truncate">{customer.address}</span>
+                      </div>
+                    )}
+                    {customer.tax_id && (
+                      <div className="flex items-center gap-2">
+                        <Hash className="w-3.5 h-3.5 shrink-0" />
+                        <span className="font-mono">{customer.tax_id}</span>
                       </div>
                     )}
                   </div>
