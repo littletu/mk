@@ -174,6 +174,9 @@ export default async function PayrollDetailPage({ params }: { params: Promise<{ 
                           ))}
                         </div>
                       )}
+                      {entry.work_progress && (
+                        <p className="mt-1.5 pt-1.5 border-t border-gray-200 text-gray-500">{entry.work_progress}</p>
+                      )}
                     </div>
                   )
                 })}

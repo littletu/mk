@@ -95,6 +95,7 @@ export default async function TimeReportsPage({
                   <th className="text-right px-4 py-3 font-medium text-gray-600">代墊</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">補貼</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">其他</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">施工概況</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -110,11 +111,14 @@ export default async function TimeReportsPage({
                     <td className="px-4 py-3 text-right">{entry.advance_payment > 0 ? formatCurrency(entry.advance_payment) : '—'}</td>
                     <td className="px-4 py-3 text-right">{entry.subsidy > 0 ? formatCurrency(entry.subsidy) : '—'}</td>
                     <td className="px-4 py-3 text-right">{entry.other_fee > 0 ? formatCurrency(entry.other_fee) : '—'}</td>
+                    <td className="px-4 py-3 max-w-[200px]">
+                      <span className="text-gray-500 text-xs line-clamp-2">{entry.work_progress || '—'}</span>
+                    </td>
                   </tr>
                 ))}
                 {!entries?.length && (
                   <tr>
-                    <td colSpan={10} className="px-4 py-8 text-center text-gray-400">無符合條件的工時記錄</td>
+                    <td colSpan={11} className="px-4 py-8 text-center text-gray-400">無符合條件的工時記錄</td>
                   </tr>
                 )}
               </tbody>

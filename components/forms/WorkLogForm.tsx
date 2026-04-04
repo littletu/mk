@@ -274,6 +274,9 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
               <p className="text-xs text-gray-600 mt-1">
                 工作 {entry.regular_days}天 ／ 加班 {entry.overtime_hours}h
               </p>
+              {entry.work_progress && (
+                <p className="text-xs text-gray-500 mt-1 line-clamp-2">📝 {entry.work_progress}</p>
+              )}
             </button>
           ))}
         </div>
