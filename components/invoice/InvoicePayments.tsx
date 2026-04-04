@@ -64,8 +64,16 @@ export function InvoicePayments({ invoiceId, invoiceTotal, taxInvoices: init }: 
     const data = await res.json()
     if (!res.ok) { toast.error(data.error ?? '新增失敗'); setLoading(false); return }
     toast.success('統一發票已新增')
-    // Update local state immediately so UI updates without needing router.refresh()
-    setTaxInvoices(prev => [...prev, { ...data, invoice_payments: [] }])
+    // Build new item from form data (don't rely on API returning SELECT result)
+    const newItem: TaxInvoice = {
+      id: data.id ?? crypto.randomUUID(),
+      tax_invoice_number: taxForm.tax_invoice_number.trim(),
+      tax_invoice_date: taxForm.tax_invoice_date,
+      amount: parseFloat(taxForm.amount),
+      notes: taxForm.notes || null,
+      invoice_payments: [],
+    }
+    setTaxInvoices(prev => [...prev, newItem])
     setTaxForm(emptyTaxForm())
     setShowTaxForm(false)
     setLoading(false)
@@ -94,10 +102,16 @@ export function InvoicePayments({ invoiceId, invoiceTotal, taxInvoices: init }: 
     const data = await res.json()
     if (!res.ok) { toast.error(data.error ?? '新增失敗'); setLoading(false); return }
     toast.success('收款記錄已新增')
-    // Update local state immediately
+    // Build new payment from form data
+    const newPayment: Payment = {
+      id: data.id ?? crypto.randomUUID(),
+      payment_date: form.payment_date,
+      amount: parseFloat(form.amount),
+      notes: form.notes || null,
+    }
     setTaxInvoices(prev => prev.map(ti =>
       ti.id === taxId
-        ? { ...ti, invoice_payments: [...ti.invoice_payments, data] }
+        ? { ...ti, invoice_payments: [...ti.invoice_payments, newPayment] }
         : ti
     ))
     setPayForms(prev => ({ ...prev, [taxId]: emptyPayForm() }))

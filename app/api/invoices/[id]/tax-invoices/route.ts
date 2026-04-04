@@ -27,10 +27,10 @@ export async function POST(
     tax_invoice_date,
     amount: parseFloat(amount),
     notes: notes || null,
-  }).select().single()
+  }).select('id').single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json({ id: data.id })
 }
 
 export async function DELETE(
