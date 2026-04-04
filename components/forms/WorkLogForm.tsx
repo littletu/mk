@@ -55,6 +55,9 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
   const [selectedDate, setSelectedDate] = useState(today)
   const [weekStart, setWeekStart] = useState(() => getWeekStart(today))
   const [dateEntries, setDateEntries] = useState<any[]>(todayEntries)
+  const [weekEntryDates, setWeekEntryDates] = useState<Set<string>>(
+    () => todayEntries.length > 0 ? new Set([today]) : new Set()
+  )
   const calendarRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(false)
@@ -62,6 +65,25 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  async function fetchWeekEntries(ws: string) {
+    const weekEnd = (() => {
+      const d = new Date(ws + 'T12:00:00')
+      d.setDate(d.getDate() + 6)
+      return d.toISOString().split('T')[0]
+    })()
+    const { data } = await supabase
+      .from('time_entries')
+      .select('work_date')
+      .eq('worker_id', workerId)
+      .gte('work_date', ws)
+      .lte('work_date', weekEnd)
+    setWeekEntryDates(new Set(data?.map((e: any) => e.work_date) ?? []))
+  }
+
+  useEffect(() => {
+    fetchWeekEntries(weekStart)
+  }, [weekStart])
 
   useEffect(() => {
     if (selectedDate === today) {
@@ -143,6 +165,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
     setEditingId(null)
     setEditingProject(null)
     setLoading(false)
+    fetchWeekEntries(weekStart)
     router.refresh()
   }
 
@@ -253,6 +276,12 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                       {DAY_LABELS[dow]}
                     </span>
                     <span className="font-semibold">{d.getDate()}</span>
+                    <span className={cn(
+                      'w-1.5 h-1.5 rounded-full mt-0.5',
+                      weekEntryDates.has(date)
+                        ? isSelected ? 'bg-white/70' : 'bg-red-400'
+                        : 'invisible'
+                    )} />
                   </button>
                 )
               })}
@@ -297,6 +326,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                       const { error } = await supabase.from('time_entries').delete().eq('id', entry.id)
                       if (error) { toast.error('刪除失敗：' + error.message); return }
                       toast.success('已刪除')
+                      fetchWeekEntries(weekStart)
                       router.refresh()
                     }}
                     className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:text-red-600 hover:border-red-300 transition-colors"
