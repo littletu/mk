@@ -14,7 +14,8 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
   const month = parseInt(sp.month ?? String(curMonth))
   const pad = (n: number) => String(n).padStart(2, '0')
   const monthStart = `${year}-${pad(month)}-01`
-  const monthEnd = `${year}-${pad(month)}-31`
+  const lastDay = new Date(year, month, 0).getDate()
+  const monthEnd = `${year}-${pad(month)}-${pad(lastDay)}`
 
   const supabase = await createClient()
 
@@ -53,9 +54,9 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
       .gte('period_start', monthStart)
       .lte('period_end', monthEnd),
 
-    // 本月工程開銷
+    // 本月開銷（工程+公司）
     supabase.from('expenses')
-      .select('amount, category')
+      .select('amount, category, project_id')
       .gte('date', monthStart)
       .lte('date', monthEnd),
 
@@ -76,12 +77,11 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
   const totalCost = totalPayroll + totalExpenses + totalWorkerReceipts
   const netProfit = totalCollected - totalCost
 
-  // 開銷分類
-  const expenseByCategory: Record<string, number> = {}
-  for (const e of expenses ?? []) {
-    expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + (e.amount || 0)
-  }
-  const categoryLabel: Record<string, string> = { material: '材料', tool: '工具', transportation: '交通', other: '其他' }
+  // 工程 vs 公司開銷拆分
+  const projectExpenses = (expenses ?? []).filter((e: any) => e.project_id)
+  const companyExpenses = (expenses ?? []).filter((e: any) => !e.project_id)
+  const totalProjectExpenses = projectExpenses.reduce((s: number, e: any) => s + (e.amount || 0), 0)
+  const totalCompanyExpenses = companyExpenses.reduce((s: number, e: any) => s + (e.amount || 0), 0)
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(curYear, curMonth - 1 - i, 1)
@@ -250,12 +250,18 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
                 <span className="text-gray-600">薪資支出</span>
                 <span className="font-semibold text-red-600">{formatCurrency(totalPayroll)}</span>
               </div>
-              {Object.entries(expenseByCategory).map(([cat, amount]) => (
-                <div key={cat} className="flex justify-between items-center py-1">
-                  <span className="text-gray-600">工程開銷・{categoryLabel[cat] ?? cat}</span>
-                  <span className="font-medium text-orange-600">{formatCurrency(amount)}</span>
+              {totalProjectExpenses > 0 && (
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-gray-600">工程開銷</span>
+                  <span className="font-medium text-orange-600">{formatCurrency(totalProjectExpenses)}</span>
                 </div>
-              ))}
+              )}
+              {totalCompanyExpenses > 0 && (
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-gray-600">公司開銷</span>
+                  <span className="font-medium text-orange-600">{formatCurrency(totalCompanyExpenses)}</span>
+                </div>
+              )}
               {totalWorkerReceipts > 0 && (
                 <div className="flex justify-between items-center py-1">
                   <span className="text-gray-600 flex items-center gap-1.5">
