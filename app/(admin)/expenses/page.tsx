@@ -48,7 +48,11 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     receiptQuery,
   ])
 
-  const expenseTotal = expenses?.reduce((s, e) => s + (e.amount || 0), 0) ?? 0
+  const projectExpenses = (expenses ?? []).filter((e: any) => e.expense_type === 'project' || (!e.expense_type && e.project_id))
+  const companyExpenses = (expenses ?? []).filter((e: any) => e.expense_type === 'company' || (!e.expense_type && !e.project_id))
+  const projectExpenseTotal = projectExpenses.reduce((s, e) => s + (e.amount || 0), 0)
+  const companyExpenseTotal = companyExpenses.reduce((s, e) => s + (e.amount || 0), 0)
+  const expenseTotal = (expenses ?? []).reduce((s, e) => s + (e.amount || 0), 0)
   const receiptTotal = receipts?.reduce((s, r) => s + (r.amount || 0), 0) ?? 0
 
   return (
@@ -56,7 +60,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">開銷管理</h1>
         <p className="text-sm text-gray-500 mt-1">
-          公司開銷 {formatCurrency(expenseTotal)}　師傅發票 {formatCurrency(receiptTotal)}　合計 {formatCurrency(expenseTotal + receiptTotal)}
+          工程開銷 {formatCurrency(projectExpenseTotal)}　公司開銷 {formatCurrency(companyExpenseTotal)}　師傅發票 {formatCurrency(receiptTotal)}　合計 {formatCurrency(expenseTotal + receiptTotal)}
         </p>
       </div>
 
@@ -75,20 +79,20 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         </div>
 
         <div className="lg:col-span-2 space-y-6">
-          {/* 公司開銷 */}
+          {/* 工程開銷 */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Receipt className="w-4 h-4" />
-                公司開銷（{expenses?.length ?? 0} 筆）
-                <span className="ml-auto text-sm font-normal text-gray-500">{formatCurrency(expenseTotal)}</span>
+                工程開銷（{projectExpenses.length} 筆）
+                <span className="ml-auto text-sm font-normal text-gray-500">{formatCurrency(projectExpenseTotal)}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-gray-50">
-                {!expenses?.length ? (
-                  <p className="text-center text-gray-400 py-10 text-sm">尚無符合條件的開銷記錄</p>
-                ) : expenses.map((expense: any) => (
+                {!projectExpenses.length ? (
+                  <p className="text-center text-gray-400 py-10 text-sm">尚無工程開銷記錄</p>
+                ) : projectExpenses.map((expense: any) => (
                   <div key={expense.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -97,20 +101,54 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <p className="text-xs text-gray-500">
-                          {formatDate(expense.date)} ｜ {(expense.project as any)?.name ?? '—'}
+                          {formatDate(expense.date)}{(expense.project as any)?.name ? ` ｜ ${(expense.project as any).name}` : ''}
                         </p>
                         {expense.receipt_url && (
-                          <a
-                            href={expense.receipt_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                          >
+                          <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
                             <ExternalLink className="w-3 h-3" />
                             {expense.receipt_name ?? '查看發票'}
                           </a>
                         )}
                       </div>
+                    </div>
+                    <span className="font-semibold text-sm text-red-600 shrink-0 ml-3">{formatCurrency(expense.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 公司開銷 */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Receipt className="w-4 h-4" />
+                公司開銷（{companyExpenses.length} 筆）
+                <span className="ml-auto text-sm font-normal text-gray-500">{formatCurrency(companyExpenseTotal)}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-gray-50">
+                {!companyExpenses.length ? (
+                  <p className="text-center text-gray-400 py-10 text-sm">尚無公司開銷記錄</p>
+                ) : companyExpenses.map((expense: any) => (
+                  <div key={expense.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs shrink-0">{categoryLabel[expense.category]}</Badge>
+                        <span className="text-sm font-medium text-gray-900 truncate">{expense.description || '—'}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {formatDate(expense.date)}
+                        {expense.receipt_url && (
+                          <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline ml-2">
+                            <ExternalLink className="w-3 h-3" />
+                            {expense.receipt_name ?? '查看發票'}
+                          </a>
+                        )}
+                      </p>
                     </div>
                     <span className="font-semibold text-sm text-red-600 shrink-0 ml-3">{formatCurrency(expense.amount)}</span>
                   </div>

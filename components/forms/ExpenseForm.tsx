@@ -25,6 +25,7 @@ export function ExpenseForm({ projects, defaultProjectId, onSaved }: Props) {
   const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [expenseType, setExpenseType] = useState<'project' | 'company'>(defaultProjectId ? 'project' : 'project')
   const [form, setForm] = useState({
     project_id: defaultProjectId ?? '',
     date: todayString(),
@@ -48,7 +49,7 @@ export function ExpenseForm({ projects, defaultProjectId, onSaved }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.project_id) { toast.error('請選擇工程'); return }
+    if (expenseType === 'project' && !form.project_id) { toast.error('請選擇工程'); return }
     if (!form.amount || parseFloat(form.amount) <= 0) { toast.error('請輸入金額'); return }
 
     setLoading(true)
@@ -74,7 +75,8 @@ export function ExpenseForm({ projects, defaultProjectId, onSaved }: Props) {
     }
 
     const { error } = await supabase.from('expenses').insert({
-      project_id: form.project_id,
+      project_id: expenseType === 'project' ? form.project_id : null,
+      expense_type: expenseType,
       date: form.date,
       category: form.category,
       amount: parseFloat(form.amount),
@@ -86,6 +88,7 @@ export function ExpenseForm({ projects, defaultProjectId, onSaved }: Props) {
 
     if (error) { toast.error('新增失敗：' + error.message); setLoading(false); return }
     toast.success('開銷已記錄')
+    setExpenseType(defaultProjectId ? 'project' : 'project')
     setForm({ project_id: defaultProjectId ?? '', date: todayString(), category: 'material', amount: '', description: '' })
     setFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -104,7 +107,31 @@ export function ExpenseForm({ projects, defaultProjectId, onSaved }: Props) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* 開銷類型 */}
           {!defaultProjectId && (
+            <div className="space-y-1.5">
+              <Label>開銷類型</Label>
+              <div className="flex rounded-lg border border-input overflow-hidden">
+                {(['project', 'company'] as const).map(type => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => { setExpenseType(type); setForm(f => ({ ...f, project_id: '' })) }}
+                    className={`flex-1 py-1.5 text-sm font-medium transition-colors ${
+                      expenseType === type
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {type === 'project' ? '工程開銷' : '公司開銷'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 工程選擇（工程開銷才顯示） */}
+          {!defaultProjectId && expenseType === 'project' && (
             <div className="space-y-1.5">
               <Label>工程</Label>
               <select name="project_id" value={form.project_id} onChange={handleChange} className={selectCls}>
