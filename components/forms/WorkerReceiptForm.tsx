@@ -56,6 +56,31 @@ const emptyForm = (today: string) => ({
   category: '',
 })
 
+async function compressImage(file: File, maxPx = 1920, quality = 0.8): Promise<File> {
+  if (!file.type.startsWith('image/')) return file
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > maxPx || height > maxPx) {
+        if (width > height) { height = Math.round(height * maxPx / width); width = maxPx }
+        else { width = Math.round(width * maxPx / height); height = maxPx }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width; canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        (blob) => resolve(blob ? new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }) : file),
+        'image/jpeg', quality
+      )
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
+}
+
 export function WorkerReceiptForm({ workerId, workerProfileId, projects, receipts: initialReceipts, categories, today }: Props) {
   const supabase = createClient()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -113,18 +138,19 @@ export function WorkerReceiptForm({ workerId, workerProfileId, projects, receipt
       let file_name = editingFileName
 
       if (file) {
-        const ext = file.name.split('.').pop()
+        const compressed = await compressImage(file)
+        const ext = compressed.name.split('.').pop()
         const path = `${workerProfileId}/${Date.now()}.${ext}`
         const { error: uploadError } = await supabase.storage
           .from('receipts')
-          .upload(path, file, { upsert: false })
+          .upload(path, compressed, { upsert: false })
         if (uploadError) {
           toast.error('檔案上傳失敗：' + uploadError.message)
           return
         }
         const { data: urlData } = supabase.storage.from('receipts').getPublicUrl(path)
         file_url = urlData.publicUrl
-        file_name = file.name
+        file_name = compressed.name
       }
 
       const payload = {
