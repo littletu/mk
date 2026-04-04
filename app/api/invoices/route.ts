@@ -18,14 +18,18 @@ export async function POST(request: Request) {
   const body = await request.json()
   const { customer_id, project_id, issue_date, due_date, tax_rate, notes, items } = body
 
-  // Generate invoice number (application-side, no RPC needed)
+  // Generate invoice number based on max existing sequence (avoids duplicate after deletions)
   const year = new Date().getFullYear()
-  const { count, error: countError } = await supabase
+  const { data: lastInvoice, error: countError } = await supabase
     .from('invoices')
-    .select('*', { count: 'exact', head: true })
+    .select('invoice_number')
     .like('invoice_number', `INV-${year}-%`)
-  if (countError) return NextResponse.json({ error: `資料庫錯誤（invoices 資料表可能尚未建立）：${countError.message}` }, { status: 500 })
-  const seq = ((count ?? 0) + 1).toString().padStart(4, '0')
+    .order('invoice_number', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (countError) return NextResponse.json({ error: `資料庫錯誤：${countError.message}` }, { status: 500 })
+  const lastSeq = lastInvoice ? parseInt(lastInvoice.invoice_number.split('-')[2] ?? '0', 10) : 0
+  const seq = (lastSeq + 1).toString().padStart(4, '0')
   const invoice_number = `INV-${year}-${seq}`
 
   // Calculate totals

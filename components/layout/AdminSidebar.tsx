@@ -15,27 +15,37 @@ import {
   ClipboardList,
   Settings,
   LogOut,
+  MessageSquareWarning,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 const navItems = [
-  { href: '/dashboard', label: '儀表板', icon: LayoutDashboard },
-  { href: '/customers', label: '客戶管理', icon: Users },
-  { href: '/projects', label: '工程管理', icon: FolderOpen },
-  { href: '/workers', label: '師傅管理', icon: UserCog },
-  { href: '/time-reports', label: '工時報表', icon: Clock },
-  { href: '/payroll', label: '薪資管理', icon: Wallet },
-  { href: '/expenses', label: '開銷管理', icon: Receipt },
-  { href: '/invoices', label: '請款管理', icon: ClipboardList },
-  { href: '/accounting', label: '帳目總覽', icon: BookOpen },
-  { href: '/system', label: '系統管理', icon: Settings },
+  { href: '/dashboard',    label: '儀表板',  icon: LayoutDashboard, key: 'dashboard' },
+  { href: '/customers',    label: '客戶管理', icon: Users,           key: 'customers' },
+  { href: '/projects',     label: '工程管理', icon: FolderOpen,      key: 'projects' },
+  { href: '/workers',      label: '師傅管理', icon: UserCog,         key: 'workers' },
+  { href: '/time-reports', label: '工時報表', icon: Clock,           key: 'time-reports' },
+  { href: '/payroll',      label: '薪資管理', icon: Wallet,          key: 'payroll' },
+  { href: '/expenses',     label: '開銷管理', icon: Receipt,         key: 'expenses' },
+  { href: '/invoices',     label: '請款管理', icon: ClipboardList,   key: 'invoices' },
+  { href: '/accounting',   label: '帳目總覽',  icon: BookOpen,              key: 'accounting' },
+  { href: '/issues',       label: '問題管理',  icon: MessageSquareWarning,  key: 'issues' },
+  { href: '/system',       label: '系統管理',  icon: Settings,              key: 'system' },
 ]
 
-export function AdminSidebar() {
+interface Props {
+  allowedSections: string[] | null  // null = full access
+}
+
+export function AdminSidebar({ allowedSections }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+
+  const visibleItems = allowedSections === null
+    ? navItems
+    : navItems.filter(item => allowedSections.includes(item.key))
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -50,7 +60,7 @@ export function AdminSidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map(({ href, label, icon: Icon }) => (
+        {visibleItems.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}

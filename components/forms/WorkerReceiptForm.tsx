@@ -17,11 +17,17 @@ interface Project {
   name: string
 }
 
+interface Category {
+  id: string
+  name: string
+}
+
 interface ReceiptEntry {
   id: string
   receipt_date: string
   description: string
   amount: number | null
+  category: string | null
   file_url: string | null
   file_name: string | null
   project_id: string | null
@@ -33,6 +39,7 @@ interface Props {
   workerProfileId: string
   projects: Project[]
   receipts: ReceiptEntry[]
+  categories: Category[]
   today: string
 }
 
@@ -46,9 +53,10 @@ const emptyForm = (today: string) => ({
   description: '',
   amount: '',
   project_id: '',
+  category: '',
 })
 
-export function WorkerReceiptForm({ workerId, workerProfileId, projects, receipts: initialReceipts, today }: Props) {
+export function WorkerReceiptForm({ workerId, workerProfileId, projects, receipts: initialReceipts, categories, today }: Props) {
   const supabase = createClient()
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -80,6 +88,7 @@ export function WorkerReceiptForm({ workerId, workerProfileId, projects, receipt
       description: r.description,
       amount: r.amount != null ? String(r.amount) : '',
       project_id: r.project_id ?? '',
+      category: r.category ?? '',
     })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -123,6 +132,7 @@ export function WorkerReceiptForm({ workerId, workerProfileId, projects, receipt
         receipt_date: form.receipt_date,
         description: form.description.trim(),
         amount: form.amount ? parseFloat(form.amount) : null,
+        category: form.category || null,
         file_url,
         file_name,
       }
@@ -227,6 +237,22 @@ export function WorkerReceiptForm({ workerId, workerProfileId, projects, receipt
             </div>
 
             <div className="space-y-1.5">
+              <Label htmlFor="category">費用類別</Label>
+              <select
+                id="category"
+                name="category"
+                value={form.category}
+                onChange={handleChange}
+                className={cn(selectCls, !form.category && 'text-muted-foreground')}
+              >
+                <option value="">選擇類別（選填）</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
               <Label htmlFor="description">費用說明 *</Label>
               <Textarea
                 id="description"
@@ -316,6 +342,9 @@ export function WorkerReceiptForm({ workerId, workerProfileId, projects, receipt
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-gray-900 truncate">{r.description}</p>
+                    {r.category && (
+                      <Badge variant="outline" className="text-xs shrink-0">{r.category}</Badge>
+                    )}
                     <Badge variant="secondary" className="text-xs shrink-0">點擊編輯</Badge>
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">

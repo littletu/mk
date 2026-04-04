@@ -4,11 +4,9 @@ import { Badge } from '@/components/ui/badge'
 import { formatDate, formatCurrency } from '@/lib/utils/date'
 import { ExpenseForm } from '@/components/forms/ExpenseForm'
 import { ExpenseFilters } from '@/components/forms/ExpenseFilters'
+import { ExpenseRow } from '@/components/forms/ExpenseRow'
 import { Receipt, FileText, ExternalLink } from 'lucide-react'
-
-const categoryLabel: Record<string, string> = {
-  material: '材料', tool: '工具', transportation: '交通', other: '其他',
-}
+// ExternalLink still used in receipts section below
 
 interface SearchParams {
   project?: string
@@ -97,27 +95,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                 {!projectExpenses.length ? (
                   <p className="text-center text-gray-400 py-10 text-sm">尚無工程開銷記錄</p>
                 ) : projectExpenses.map((expense: any) => (
-                  <div key={expense.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs shrink-0">{categoryLabel[expense.category]}</Badge>
-                        <span className="text-sm font-medium text-gray-900 truncate">{expense.description || '—'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-xs text-gray-500">
-                          {formatDate(expense.date)}{(expense.project as any)?.name ? ` ｜ ${(expense.project as any).name}` : ''}
-                        </p>
-                        {expense.receipt_url && (
-                          <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
-                            <ExternalLink className="w-3 h-3" />
-                            {expense.receipt_name ?? '查看發票'}
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                    <span className="font-semibold text-sm text-red-600 shrink-0 ml-3">{formatCurrency(expense.amount)}</span>
-                  </div>
+                  <ExpenseRow key={expense.id} expense={expense} categories={expenseCategories} showProject />
                 ))}
               </div>
             </CardContent>
@@ -137,25 +115,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                 {!companyExpenses.length ? (
                   <p className="text-center text-gray-400 py-10 text-sm">尚無公司開銷記錄</p>
                 ) : companyExpenses.map((expense: any) => (
-                  <div key={expense.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs shrink-0">{categoryLabel[expense.category]}</Badge>
-                        <span className="text-sm font-medium text-gray-900 truncate">{expense.description || '—'}</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {formatDate(expense.date)}
-                        {expense.receipt_url && (
-                          <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline ml-2">
-                            <ExternalLink className="w-3 h-3" />
-                            {expense.receipt_name ?? '查看發票'}
-                          </a>
-                        )}
-                      </p>
-                    </div>
-                    <span className="font-semibold text-sm text-red-600 shrink-0 ml-3">{formatCurrency(expense.amount)}</span>
-                  </div>
+                  <ExpenseRow key={expense.id} expense={expense} categories={companyExpenseCategories} />
                 ))}
               </div>
             </CardContent>

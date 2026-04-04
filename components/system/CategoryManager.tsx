@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,6 +31,55 @@ export function CategoryManager({ title, tableName, categories: init, icon, scop
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+
+  // Drag state
+  const dragIndex = useRef<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+  function handleDragStart(idx: number) {
+    dragIndex.current = idx
+  }
+
+  function handleDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault()
+    setDragOverIndex(idx)
+  }
+
+  function handleDragLeave() {
+    setDragOverIndex(null)
+  }
+
+  async function handleDrop(dropIdx: number) {
+    setDragOverIndex(null)
+    const fromIdx = dragIndex.current
+    if (fromIdx === null || fromIdx === dropIdx) return
+    dragIndex.current = null
+
+    const reordered = [...categories]
+    const [moved] = reordered.splice(fromIdx, 1)
+    reordered.splice(dropIdx, 0, moved)
+
+    // Assign new sort_order
+    const updated = reordered.map((c, i) => ({ ...c, sort_order: i + 1 }))
+    setCategories(updated)
+
+    // Batch update in DB
+    const updates = updated.map(c =>
+      supabase.from(tableName).update({ sort_order: c.sort_order }).eq('id', c.id)
+    )
+    const results = await Promise.all(updates)
+    const failed = results.find(r => r.error)
+    if (failed?.error) {
+      toast.error('排序更新失敗：' + failed.error.message)
+    } else {
+      router.refresh()
+    }
+  }
+
+  function handleDragEnd() {
+    dragIndex.current = null
+    setDragOverIndex(null)
+  }
 
   async function handleAdd() {
     if (!newName.trim()) return
@@ -76,14 +125,27 @@ export function CategoryManager({ title, tableName, categories: init, icon, scop
           <span className="text-xs font-normal text-gray-400 ml-1">{categories.length} 項</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-1.5">
         {categories.length === 0 && (
           <p className="text-sm text-gray-400 text-center py-4">尚無分類，請新增</p>
         )}
 
-        {categories.map(cat => (
-          <div key={cat.id} className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg group">
-            <GripVertical className="w-4 h-4 text-gray-300 shrink-0" />
+        {categories.map((cat, idx) => (
+          <div
+            key={cat.id}
+            draggable
+            onDragStart={() => handleDragStart(idx)}
+            onDragOver={e => handleDragOver(e, idx)}
+            onDragLeave={handleDragLeave}
+            onDrop={() => handleDrop(idx)}
+            onDragEnd={handleDragEnd}
+            className={`flex items-center gap-2 p-2.5 rounded-lg group transition-colors ${
+              dragOverIndex === idx
+                ? 'bg-orange-50 border-2 border-orange-300 border-dashed'
+                : 'bg-gray-50 border-2 border-transparent'
+            }`}
+          >
+            <GripVertical className="w-4 h-4 text-gray-300 shrink-0 cursor-grab active:cursor-grabbing" />
             {editingId === cat.id ? (
               <>
                 <Input

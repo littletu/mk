@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import { formatDate, formatCurrency, currentYearMonth } from '@/lib/utils/date'
 import { getBiweeklyPeriods } from '@/lib/utils/payroll'
 import { PayrollActions } from '@/components/forms/PayrollActions'
+import { PayrollQuickActions } from '@/components/forms/PayrollQuickActions'
+import { PayrollPrintButton } from '@/components/forms/PayrollPrintButton'
 import { MonthSelector } from '@/components/forms/MonthSelector'
 import Link from 'next/link'
 import { Wallet } from 'lucide-react'
@@ -46,27 +48,49 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">薪資管理</h1>
-        <MonthSelector options={monthOptions} value={`${year}-${month}`} />
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">薪資管理</h1>
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <MonthSelector options={monthOptions} value={`${year}-${month}`} />
+        </div>
       </div>
 
       {periods.map(period => (
         <div key={period.start} className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">{period.label}</h2>
-            <PayrollActions
-              periodStart={period.start}
-              periodEnd={period.end}
-              workers={workers ?? []}
-            />
-          </div>
+          {(() => {
+            const periodRecords = (records ?? []).filter(r => r.period_start === period.start)
+            const totalDays = periodRecords.reduce((s, r) => s + (r.regular_days ?? 0), 0)
+            const totalNet = periodRecords.reduce((s, r) => s + (r.net_amount ?? 0), 0)
+            return (
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-lg font-semibold text-gray-800">{period.label}</h2>
+                {periodRecords.length > 0 && (
+                  <span className="text-sm text-gray-500">
+                    共 {totalDays} 工・本期薪資合計 {formatCurrency(totalNet)}
+                  </span>
+                )}
+                <div className="ml-auto flex items-center gap-2">
+                  <PayrollPrintButton
+                    periodStart={period.start}
+                    periodEnd={period.end}
+                    disabled={periodRecords.length === 0}
+                  />
+                  <PayrollActions
+                    periodStart={period.start}
+                    periodEnd={period.end}
+                    workers={workers ?? []}
+                  />
+                </div>
+              </div>
+            )
+          })()}
 
           <div className="space-y-3">
             {(workers ?? []).map((worker: any) => {
               const record = records?.find(r => r.worker_id === worker.id && r.period_start === period.start)
+              if (!record) return null
               return (
-                <Card key={worker.id} className={record ? '' : 'opacity-60'}>
+                <Card key={worker.id}>
                   <CardContent className="p-4 flex items-center justify-between">
                     <div>
                       <p className="font-medium text-sm">{(worker.profile as any)?.full_name}</p>
@@ -74,25 +98,25 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
                         日薪 {formatCurrency(worker.daily_rate)} ／ 加班時薪 {formatCurrency(worker.overtime_rate)}
                       </p>
                     </div>
-                    {record ? (
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className="font-bold text-orange-600">{formatCurrency(record.net_amount)}</p>
-                          <p className="text-xs text-gray-500">{record.regular_days}天 ＋ {record.overtime_hours}h 加班</p>
-                        </div>
-                        <Link href={`/payroll/${record.id}`}>
-                          <Badge variant={statusVariant[record.status]} className="cursor-pointer">
-                            {statusLabel[record.status]}
-                          </Badge>
-                        </Link>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <p className="font-bold text-orange-600">{formatCurrency(record.net_amount)}</p>
+                        <p className="text-xs text-gray-500">{record.regular_days}天 ＋ {record.overtime_hours}h 加班</p>
                       </div>
-                    ) : (
-                      <span className="text-xs text-gray-400">尚未計算</span>
-                    )}
+                      <PayrollQuickActions recordId={record.id} status={record.status} />
+                      <Link href={`/payroll/${record.id}`}>
+                        <Badge variant={statusVariant[record.status]} className="cursor-pointer">
+                          {statusLabel[record.status]}
+                        </Badge>
+                      </Link>
+                    </div>
                   </CardContent>
                 </Card>
               )
             })}
+            {!(records ?? []).some(r => r.period_start === period.start) && (
+              <p className="text-sm text-gray-400 text-center py-6">此期間尚無薪資記錄，請先計算薪資</p>
+            )}
           </div>
         </div>
       ))}

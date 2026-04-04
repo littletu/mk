@@ -35,9 +35,25 @@ export function PayrollActions({ periodStart, periodEnd, workers }: Props) {
     setLoading(true)
 
     let count = 0
+    let skipped = 0
     let errorMsg = ''
 
+    // Fetch existing records to avoid overwriting confirmed/paid ones
+    const { data: existingRecords } = await supabase
+      .from('payroll_records')
+      .select('worker_id, status')
+      .eq('period_start', periodStart)
+      .eq('period_end', periodEnd)
+
+    const lockedWorkerIds = new Set(
+      (existingRecords ?? [])
+        .filter((r: any) => r.status === 'confirmed' || r.status === 'paid')
+        .map((r: any) => r.worker_id)
+    )
+
     for (const worker of workers) {
+      if (lockedWorkerIds.has(worker.id)) { skipped++; continue }
+
       const { data: entries, error: fetchError } = await supabase
         .from('time_entries')
         .select('*')
@@ -63,10 +79,13 @@ export function PayrollActions({ periodStart, periodEnd, workers }: Props) {
 
     if (errorMsg) {
       toast.error('部分薪資計算失敗：' + errorMsg)
-    } else if (count === 0) {
+    } else if (count === 0 && skipped === 0) {
       toast.info('此期間內沒有工時記錄，無法計算薪資')
     } else {
-      toast.success(`薪資計算完成，共 ${count} 位師傅`)
+      const parts = []
+      if (count > 0) parts.push(`${count} 位師傅已計算`)
+      if (skipped > 0) parts.push(`${skipped} 位已確認/發薪略過`)
+      toast.success(parts.join('，'))
     }
 
     router.refresh()

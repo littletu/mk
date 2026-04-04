@@ -20,7 +20,7 @@ export default async function WorkerReceiptsPage() {
     )
   }
 
-  const [{ data: projects }, { data: receipts }] = await Promise.all([
+  const [{ data: projects }, { data: receipts }, { data: categories }] = await Promise.all([
     supabase.from('projects').select('id, name').eq('status', 'active').order('name'),
     supabase.from('worker_receipts')
       .select('*, project:projects(name)')
@@ -28,6 +28,7 @@ export default async function WorkerReceiptsPage() {
       .order('receipt_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(30),
+    supabase.from('expense_categories').select('id, name').eq('scope', 'project').order('sort_order'),
   ])
 
   return (
@@ -41,6 +42,7 @@ export default async function WorkerReceiptsPage() {
         workerProfileId={user!.id}
         projects={projects ?? []}
         receipts={receipts ?? []}
+        categories={categories ?? []}
         today={todayString()}
       />
     </div>

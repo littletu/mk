@@ -3,9 +3,11 @@ import { notFound } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Printer } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils/date'
 import { PayrollStatusActions } from '@/components/forms/PayrollStatusActions'
+import { PayrollAdjustForm } from '@/components/forms/PayrollAdjustForm'
+import { PayrollRecalcButton } from '@/components/forms/PayrollRecalcButton'
 
 const statusLabel: Record<string, string> = { draft: '草稿', confirmed: '已確認', paid: '已發薪' }
 const statusVariant: Record<string, 'default' | 'secondary' | 'outline'> = {
@@ -44,6 +46,15 @@ export default async function PayrollDetailPage({ params }: { params: Promise<{ 
           <h1 className="text-xl font-bold text-gray-900">薪資明細</h1>
           <p className="text-sm text-gray-500">{worker?.profile?.full_name}</p>
         </div>
+        <a
+          href={`/api/payroll/slip?id=${id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 border border-gray-200 hover:border-gray-400 px-3 py-1.5 rounded-lg transition-colors"
+        >
+          <Printer className="w-3.5 h-3.5" />
+          薪資單
+        </a>
       </div>
 
       <Card>
@@ -52,7 +63,20 @@ export default async function PayrollDetailPage({ params }: { params: Promise<{ 
             <CardTitle className="text-sm text-gray-600">
               {formatDate(record.period_start)} ~ {formatDate(record.period_end)}
             </CardTitle>
-            <Badge variant={statusVariant[record.status]}>{statusLabel[record.status]}</Badge>
+            <div className="flex items-center gap-2">
+              {record.status === 'draft' && (
+                <PayrollRecalcButton
+                  recordId={id}
+                  workerId={record.worker_id}
+                  workerDailyRate={worker?.daily_rate ?? 0}
+                  workerOvertimeRate={worker?.overtime_rate ?? 0}
+                  periodStart={record.period_start}
+                  periodEnd={record.period_end}
+                  currentDeduction={record.deduction_amount ?? 0}
+                />
+              )}
+              <Badge variant={statusVariant[record.status]}>{statusLabel[record.status]}</Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -164,6 +188,14 @@ export default async function PayrollDetailPage({ params }: { params: Promise<{ 
           {record.notes && (
             <p className="text-sm text-gray-500 bg-gray-50 rounded-lg p-3">{record.notes}</p>
           )}
+
+          <PayrollAdjustForm
+            recordId={id}
+            currentDeduction={record.deduction_amount ?? 0}
+            currentNotes={record.notes}
+            currentNetAmount={record.net_amount}
+            disabled={record.status === 'paid'}
+          />
 
           <PayrollStatusActions recordId={id} currentStatus={record.status} />
         </CardContent>

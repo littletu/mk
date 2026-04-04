@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils/date'
+import { TimeEntryEditRow } from '@/components/forms/TimeEntryEditRow'
 
 const statusLabel: Record<string, string> = { draft: '待確認', confirmed: '已確認', paid: '已發薪' }
 const statusVariant: Record<string, 'default' | 'secondary' | 'outline'> = {
@@ -33,13 +34,19 @@ export default async function WorkerPayrollDetailPage({ params }: { params: Prom
 
   if (!record) notFound()
 
-  const { data: entries } = await supabase
-    .from('time_entries')
-    .select('*, project:projects(name)')
-    .eq('worker_id', worker.id)
-    .gte('work_date', record.period_start)
-    .lte('work_date', record.period_end)
-    .order('work_date', { ascending: true })
+  const [{ data: entries }, { data: projects }] = await Promise.all([
+    supabase
+      .from('time_entries')
+      .select('*, project:projects(name)')
+      .eq('worker_id', worker.id)
+      .gte('work_date', record.period_start)
+      .lte('work_date', record.period_end)
+      .order('work_date', { ascending: true }),
+    supabase.from('projects').select('id, name').eq('status', 'active').order('name'),
+  ])
+
+  // Only draft payrolls allow editing
+  const canEdit = record.status === 'draft'
 
   return (
     <div>
@@ -136,42 +143,25 @@ export default async function WorkerPayrollDetailPage({ params }: { params: Prom
         {entries && entries.length > 0 && (
           <Card>
             <CardHeader className="pb-2 pt-4 px-4">
-              <CardTitle className="text-sm text-gray-700">每日工時明細</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm text-gray-700">每日工時明細</CardTitle>
+                {canEdit && (
+                  <span className="text-xs text-orange-500">滑動每筆可編輯</span>
+                )}
+                {!canEdit && (
+                  <span className="text-xs text-gray-400">已{statusLabel[record.status]}，無法修改</span>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="px-4 pb-4 space-y-2">
-              {entries.map((entry: any) => {
-                const fees = [
-                  { label: '交通費', value: entry.transportation_fee },
-                  { label: '餐費', value: entry.meal_fee },
-                  { label: '代墊費', value: entry.advance_payment },
-                  { label: '補貼', value: entry.subsidy },
-                  { label: '其他費用', value: entry.other_fee },
-                ].filter(f => f.value > 0)
-                return (
-                  <div key={entry.id} className="rounded-lg border border-gray-100 bg-gray-50/50 px-3 py-2.5 text-xs">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-medium text-gray-800">{formatDate(entry.work_date)}</span>
-                      <span className="text-gray-500 truncate max-w-[140px] text-right">{(entry.project as any)?.name ?? '—'}</span>
-                    </div>
-                    <div className="flex gap-4 text-gray-600">
-                      <span>工數 <span className="font-medium text-gray-800">{entry.regular_days}天</span></span>
-                      {entry.overtime_hours > 0 && (
-                        <span>加班 <span className="font-medium text-gray-800">{entry.overtime_hours}h</span></span>
-                      )}
-                    </div>
-                    {fees.length > 0 && (
-                      <div className="mt-1.5 pt-1.5 border-t border-gray-200 flex flex-wrap gap-x-4 gap-y-1 text-gray-600">
-                        {fees.map(f => (
-                          <span key={f.label}>{f.label} <span className="font-medium text-gray-800">{formatCurrency(f.value)}</span></span>
-                        ))}
-                      </div>
-                    )}
-                    {entry.work_progress && (
-                      <p className="mt-1.5 pt-1.5 border-t border-gray-200 text-gray-500">{entry.work_progress}</p>
-                    )}
-                  </div>
-                )
-              })}
+              {entries.map((entry: any) => (
+                <TimeEntryEditRow
+                  key={entry.id}
+                  entry={entry}
+                  projects={projects ?? []}
+                  canEdit={canEdit}
+                />
+              ))}
               <div className="flex justify-between px-3 py-2 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg">
                 <span>合計工時</span>
                 <span>合計 {record.regular_days}天　加班 {record.overtime_hours}h</span>

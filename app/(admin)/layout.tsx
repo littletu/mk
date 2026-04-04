@@ -10,7 +10,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, full_name')
+    .select('role, full_name, allowed_sections')
     .eq('id', user.id)
     .single()
 
@@ -18,7 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex h-full">
-      <AdminSidebar />
+      <AdminSidebar allowedSections={profile?.allowed_sections ?? null} />
       <main className="flex-1 overflow-auto bg-gray-50">
         <div className="p-6 max-w-7xl mx-auto">
           {children}
