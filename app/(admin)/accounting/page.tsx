@@ -5,17 +5,42 @@ import { TrendingUp, TrendingDown, Wallet, Receipt, Clock, CheckCircle } from 'l
 import MonthSelector from './MonthSelector'
 import Link from 'next/link'
 
-interface SearchParams { year?: string; month?: string }
+interface SearchParams { view?: string; year?: string; month?: string; quarter?: string }
 
 export default async function AccountingPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams
   const { year: curYear, month: curMonth } = currentYearMonth()
+  const view = (sp.view ?? 'month') as 'month' | 'quarter' | 'year'
   const year = parseInt(sp.year ?? String(curYear))
   const month = parseInt(sp.month ?? String(curMonth))
+  const quarter = parseInt(sp.quarter ?? String(Math.ceil(curMonth / 3)))
   const pad = (n: number) => String(n).padStart(2, '0')
-  const monthStart = `${year}-${pad(month)}-01`
-  const lastDay = new Date(year, month, 0).getDate()
-  const monthEnd = `${year}-${pad(month)}-${pad(lastDay)}`
+
+  // 計算日期範圍
+  let periodStart: string
+  let periodEnd: string
+  let periodLabel: string
+
+  if (view === 'year') {
+    periodStart = `${year}-01-01`
+    periodEnd = `${year}-12-31`
+    periodLabel = `${year} 年`
+  } else if (view === 'quarter') {
+    const qStartMonth = (quarter - 1) * 3 + 1
+    const qEndMonth = quarter * 3
+    const lastDay = new Date(year, qEndMonth, 0).getDate()
+    periodStart = `${year}-${pad(qStartMonth)}-01`
+    periodEnd = `${year}-${pad(qEndMonth)}-${pad(lastDay)}`
+    periodLabel = `${year} 年 Q${quarter}`
+  } else {
+    const lastDay = new Date(year, month, 0).getDate()
+    periodStart = `${year}-${pad(month)}-01`
+    periodEnd = `${year}-${pad(month)}-${pad(lastDay)}`
+    periodLabel = `${year} 年 ${month} 月`
+  }
+
+  const monthStart = periodStart
+  const monthEnd = periodEnd
 
   const supabase = await createClient()
 
@@ -83,16 +108,21 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
   const totalProjectExpenses = projectExpenses.reduce((s: number, e: any) => s + (e.amount || 0), 0)
   const totalCompanyExpenses = companyExpenses.reduce((s: number, e: any) => s + (e.amount || 0), 0)
 
-  const monthOptions = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date(curYear, curMonth - 1 - i, 1)
-    return { year: d.getFullYear(), month: d.getMonth() + 1 }
-  })
-
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">帳目總覽</h1>
-        <MonthSelector value={`${year}-${month}`} options={monthOptions} />
+      <div className="flex items-start justify-between mb-6 gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">帳目總覽</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{periodLabel}</p>
+        </div>
+        <MonthSelector
+          curYear={curYear}
+          curMonth={curMonth}
+          activeView={view}
+          activeYear={year}
+          activeMonth={month}
+          activeQuarter={quarter}
+        />
       </div>
 
       {/* 主要數字卡片 */}
@@ -101,7 +131,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
           <CardContent className="p-4">
             <div className="flex items-center gap-1.5 mb-2">
               <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
-              <p className="text-xs text-blue-700">本月請款</p>
+              <p className="text-xs text-blue-700">期間請款</p>
             </div>
             <p className="text-lg font-bold text-blue-700">{formatCurrency(totalInvoiced)}</p>
             <p className="text-xs text-blue-500 mt-0.5">{(invoicesThisMonth ?? []).length} 筆</p>
@@ -112,7 +142,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
           <CardContent className="p-4">
             <div className="flex items-center gap-1.5 mb-2">
               <CheckCircle className="w-3.5 h-3.5 text-green-600" />
-              <p className="text-xs text-green-700">本月收款</p>
+              <p className="text-xs text-green-700">期間收款</p>
             </div>
             <p className="text-lg font-bold text-green-700">{formatCurrency(totalCollected)}</p>
             <p className="text-xs text-green-500 mt-0.5">{(paymentsThisMonth ?? []).length} 筆</p>
@@ -134,7 +164,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
           <CardContent className="p-4">
             <div className="flex items-center gap-1.5 mb-2">
               <Wallet className="w-3.5 h-3.5 text-red-600" />
-              <p className="text-xs text-red-700">本月薪資</p>
+              <p className="text-xs text-red-700">期間薪資</p>
             </div>
             <p className="text-lg font-bold text-red-700">{formatCurrency(totalPayroll)}</p>
           </CardContent>
@@ -171,13 +201,13 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center justify-between">
-              <span>本月請款單</span>
+              <span>期間請款單</span>
               <span className="text-sm font-normal text-gray-500">{formatCurrency(totalInvoiced)}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {!(invoicesThisMonth ?? []).length ? (
-              <p className="text-sm text-gray-400 text-center py-6">本月尚無請款單</p>
+              <p className="text-sm text-gray-400 text-center py-6">此期間尚無請款單</p>
             ) : (
               <div className="divide-y divide-gray-50">
                 {invoicesThisMonth!.map((inv: any) => (
@@ -242,7 +272,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
         {/* 開銷分類 */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">本月支出明細</CardTitle>
+            <CardTitle className="text-base">期間支出明細</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
@@ -285,14 +315,14 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
             <CardTitle className="text-base flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500" />
-                本月收款
+                期間收款
               </span>
               <span className="text-sm font-normal text-green-600">{formatCurrency(totalCollected)}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {!(paymentsThisMonth ?? []).length ? (
-              <p className="text-sm text-gray-400 text-center py-6">本月尚無收款記錄</p>
+              <p className="text-sm text-gray-400 text-center py-6">此期間尚無收款記錄</p>
             ) : (
               <div className="space-y-2 text-sm">
                 {(paymentsThisMonth ?? []).map((p: any, i: number) => (
