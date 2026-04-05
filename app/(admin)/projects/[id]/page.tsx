@@ -5,9 +5,11 @@ import { ProjectExpensesTab } from '@/components/project/ProjectExpensesTab'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { ArrowLeft, Users, FileText, ExternalLink, Receipt, Calendar, Clock } from 'lucide-react'
+import { ArrowLeft, Users, FileText, ExternalLink, Receipt, Calendar, Lightbulb, MapPin, MessageCircle } from 'lucide-react'
 import { AssignWorkerForm } from '@/components/forms/AssignWorkerForm'
 import { formatCurrency, formatDate } from '@/lib/utils/date'
+import { KNOWLEDGE_CATEGORY_LABELS, KNOWLEDGE_CATEGORY_COLORS } from '@/types'
+import { cn } from '@/lib/utils'
 import { ProjectTabs } from '@/components/project/ProjectTabs'
 import { ProjectTimeEntriesTab } from '@/components/project/ProjectTimeEntriesTab'
 import { AdminReceiptRow } from '@/components/forms/AdminReceiptRow'
@@ -39,6 +41,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     { data: invoices },
     { data: expenses },
     { data: expenseCategories },
+    { data: knowledgeTips },
   ] = await Promise.all([
     supabase.from('projects').select('*, customer:customers(name)').eq('id', id).single(),
     supabase.from('customers').select('*').order('name'),
@@ -48,6 +51,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     supabase.from('invoices').select('id, invoice_number, total, status').eq('project_id', id).order('created_at', { ascending: false }),
     supabase.from('expenses').select('id, date, category, amount, description, receipt_url, receipt_name').eq('project_id', id).order('date', { ascending: false }),
     supabase.from('expense_categories').select('id, name, scope').eq('scope', 'project').order('sort_order'),
+    supabase.from('knowledge_tips').select('*, worker:workers(profile:profiles(full_name)), knowledge_comments(id)').eq('project_id', id).order('created_at', { ascending: false }),
   ])
 
   if (!project) notFound()
@@ -73,6 +77,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     { key: 'invoices', label: '請款單', count: invoiceList.length },
     { key: 'expenses', label: '開銷', count: (expenses ?? []).length },
     { key: 'receipts', label: '師傅發票', count: receipts?.length ?? 0 },
+    { key: 'tips', label: '妙根老塞', count: knowledgeTips?.length ?? 0 },
   ]
 
   const assignedWorkers = (assignments ?? []).map((a: any) => ({
@@ -252,7 +257,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           />
         </div>
 
-        {/* Tab 4: 師傅發票 */}
+        {/* Tab 5: 師傅發票 */}
         <div>
           <Card>
             <CardHeader className="pb-3">
@@ -274,6 +279,63 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   {receipts.map((r: any) => (
                     <AdminReceiptRow key={r.id} receipt={r} />
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        {/* Tab 6: 妙根老塞 */}
+        <div>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-orange-500" />
+                妙根老塞（{knowledgeTips?.length ?? 0} 則）
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {!knowledgeTips?.length ? (
+                <p className="text-center text-gray-400 py-10 text-sm">此工程尚無相關老塞</p>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {knowledgeTips.map((tip: any) => {
+                    const categoryLabel = KNOWLEDGE_CATEGORY_LABELS[tip.category as keyof typeof KNOWLEDGE_CATEGORY_LABELS] ?? tip.category
+                    const categoryColor = KNOWLEDGE_CATEGORY_COLORS[tip.category as keyof typeof KNOWLEDGE_CATEGORY_COLORS] ?? 'bg-gray-100 text-gray-600'
+                    const authorName = tip.worker?.profile?.full_name ?? '—'
+                    const commentCount = tip.knowledge_comments?.length ?? 0
+                    return (
+                      <div key={tip.id} className="px-5 py-4">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full', categoryColor)}>
+                            {categoryLabel}
+                          </span>
+                          <span className="text-xs text-gray-400 ml-auto">{formatDate(tip.created_at)}</span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900">{tip.title}</p>
+                        <p className="text-xs text-gray-500 mt-1 leading-relaxed line-clamp-3 whitespace-pre-line">{tip.content}</p>
+                        {tip.reason && (
+                          <p className="text-xs text-amber-700 mt-1.5 bg-amber-50 rounded px-2 py-1 leading-relaxed">
+                            💡 {tip.reason}
+                          </p>
+                        )}
+                        {tip.image_url && (
+                          <a href={tip.image_url} target="_blank" rel="noopener noreferrer" className="inline-block mt-2">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={tip.image_url} alt="附圖" className="h-24 w-auto rounded-lg border border-gray-200 object-cover" />
+                          </a>
+                        )}
+                        <div className="flex items-center gap-3 mt-2">
+                          <span className="text-xs text-gray-400">✍️ {authorName}</span>
+                          {commentCount > 0 && (
+                            <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                              <MessageCircle className="w-3 h-3" />
+                              {commentCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </CardContent>
