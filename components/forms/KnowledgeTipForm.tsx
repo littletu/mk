@@ -159,12 +159,12 @@ export function KnowledgeTipForm({ workerId, projects }: Props) {
 
             {/* 內容 */}
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1 block">分享內容 *</label>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">你的做法或建議 *</label>
               <Textarea
                 name="content"
                 value={form.content}
                 onChange={handleChange}
-                placeholder="把你的施工經驗或訣竅寫下來，讓其他師傅也能學到..."
+                placeholder={"範例\n磁磚面一定要先打磨，讓表面粗糙才能附著。底漆用環氧樹脂的，不能用水性底漆，附著力差幾個月就起皮。打磨完要擦乾淨，兩道底漆比一道好，第一道薄、第二道稍厚。"}
                 rows={4}
                 className="text-sm bg-white resize-none"
               />
