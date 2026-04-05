@@ -29,8 +29,9 @@ export default async function SystemPage() {
   const companyExpenseCategories = (allCategories ?? []).filter(c => c.scope === 'company')
 
   const tabs = [
-    { key: 'users', label: '用戶管理' },
-    { key: 'categories', label: '分類管理' },
+    { key: 'users',       label: '用戶管理' },
+    { key: 'issues',      label: '老塞管理' },
+    { key: 'categories',  label: '分類管理' },
   ]
 
   return (
@@ -48,12 +49,16 @@ export default async function SystemPage() {
           />
         </div>
 
-        {/* Tab 1: 分類管理 */}
+        {/* Tab 1: 老塞管理 */}
         <div className="space-y-6">
           <KnowledgeCategoryManager
             categories={knowledgeCategories ?? []}
           />
           <KnowledgeTagManager groups={tagGroups} />
+        </div>
+
+        {/* Tab 2: 分類管理 */}
+        <div className="space-y-6">
           <CategoryManager
             title="工程開銷分類"
             tableName="expense_categories"
