@@ -1,14 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
-import { getAuthUser, getWorkerIdByProfileId, getKnowledgeSettings } from '@/lib/supabase/cached-auth'
+import { getAuthUser, getWorkerIdByProfileId, getWorkerProfile, getKnowledgeSettings } from '@/lib/supabase/cached-auth'
 import { Trophy, Lightbulb, MessageCircle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
 const RANK_STYLES = [
-  'text-yellow-500',   // 1st
-  'text-gray-400',     // 2nd
-  'text-orange-400',   // 3rd
+  'text-yellow-500',
+  'text-gray-400',
+  'text-orange-400',
 ]
 
 const RANK_BG = [
@@ -21,15 +21,14 @@ export default async function LeaderboardPage() {
   const user = await getAuthUser()
   if (!user) return null
 
-  const supabase = await createClient()
+  // Permission check + workerId + settings all in parallel (all cached or independent)
+  const [profileData, currentWorkerId, { commentPoints }] = await Promise.all([
+    getWorkerProfile(user.id),
+    getWorkerIdByProfileId(user.id),
+    getKnowledgeSettings(),
+  ])
 
-  // Check access permission (same gate as worker-issues)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('allowed_sections')
-    .eq('id', user.id)
-    .single()
-  const allowedSections: string[] | null = profile?.allowed_sections ?? null
+  const allowedSections: string[] | null = profileData?.allowed_sections ?? null
   const hasAccess = allowedSections === null || allowedSections.includes('worker-issues')
   if (!hasAccess) {
     return (
@@ -40,45 +39,23 @@ export default async function LeaderboardPage() {
     )
   }
 
-  const currentWorkerId = await getWorkerIdByProfileId(user.id)
+  const supabase = await createClient()
 
-  const [{ data: workers }, { data: approvedTips }, { data: allComments }, { commentPoints }] = await Promise.all([
-    supabase
-      .from('workers')
-      .select('id, profile:profiles(full_name, avatar_url)')
-      .eq('is_active', true),
-    supabase
-      .from('knowledge_tips')
-      .select('worker_id, knowledge_category:knowledge_categories(points)')
-      .eq('status', 'approved'),
-    supabase
-      .from('knowledge_comments')
-      .select('worker_id'),
-    getKnowledgeSettings(),
-  ])
+  // Single DB-aggregated query instead of 3 queries + JS aggregation
+  const { data: rows } = await supabase.rpc('get_knowledge_leaderboard')
 
-  // Aggregate points per worker
-  const leaderboard = (workers ?? [])
-    .map((w: any) => {
-      const tipPoints = (approvedTips ?? [])
-        .filter((t: any) => t.worker_id === w.id)
-        .reduce((sum: number, t: any) => sum + (t.knowledge_category?.points ?? 0), 0)
-      const commentCount = (allComments ?? []).filter((c: any) => c.worker_id === w.id).length
-      const workerCommentPoints = commentCount * commentPoints
-      const approvedCount = (approvedTips ?? []).filter((t: any) => t.worker_id === w.id).length
-      return {
-        workerId: w.id,
-        fullName: w.profile?.full_name ?? '師傅',
-        avatarUrl: w.profile?.avatar_url ?? null,
-        tipPoints,
-        commentPoints: workerCommentPoints,
-        totalPoints: tipPoints + workerCommentPoints,
-        approvedCount,
-        commentCount,
-      }
-    })
-    .filter(w => w.totalPoints > 0)
-    .sort((a, b) => b.totalPoints - a.totalPoints)
+  const leaderboard = (rows ?? [])
+    .map((r: any) => ({
+      workerId:      r.worker_id,
+      fullName:      r.full_name ?? '師傅',
+      avatarUrl:     r.avatar_url ?? null,
+      tipPoints:     Number(r.tip_points),
+      commentPoints: Number(r.comment_count) * commentPoints,
+      totalPoints:   Number(r.tip_points) + Number(r.comment_count) * commentPoints,
+      approvedCount: Number(r.approved_count),
+      commentCount:  Number(r.comment_count),
+    }))
+    .sort((a: any, b: any) => b.totalPoints - a.totalPoints)
 
   return (
     <div>
@@ -103,7 +80,7 @@ export default async function LeaderboardPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {leaderboard.map((entry, idx) => {
+          {leaderboard.map((entry: any, idx: number) => {
             const isMe = entry.workerId === currentWorkerId
             const rankStyle = RANK_STYLES[idx] ?? 'text-gray-400'
             const rowBg = idx < 3 ? RANK_BG[idx] : 'bg-white border-gray-100'
@@ -125,7 +102,13 @@ export default async function LeaderboardPage() {
                 {/* Avatar */}
                 <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-200 shrink-0">
                   {entry.avatarUrl ? (
-                    <Image src={entry.avatarUrl} alt={entry.fullName} width={36} height={36} className="object-cover w-full h-full" unoptimized />
+                    <Image
+                      src={entry.avatarUrl}
+                      alt={entry.fullName}
+                      width={36}
+                      height={36}
+                      className="object-cover w-full h-full"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-sm font-bold text-gray-500">
                       {entry.fullName[0]}

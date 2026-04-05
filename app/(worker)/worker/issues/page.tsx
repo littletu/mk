@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getAuthUser, getWorkerIdByProfileId, getKnowledgeSettings } from '@/lib/supabase/cached-auth'
+import { getAuthUser, getWorkerIdByProfileId, getWorkerProfile } from '@/lib/supabase/cached-auth'
 import { KnowledgeTipForm } from '@/components/forms/KnowledgeTipForm'
 import { KnowledgeTipCard } from '@/components/knowledge/KnowledgeTipCard'
 import { Lightbulb, Trophy } from 'lucide-react'
@@ -10,16 +10,13 @@ export default async function WorkerKnowledgePage() {
   const user = await getAuthUser()
   if (!user) return null
 
-  const supabase = await createClient()
+  // Permission check + workerId in parallel (both cached)
+  const [profileData, workerId] = await Promise.all([
+    getWorkerProfile(user.id),
+    getWorkerIdByProfileId(user.id),
+  ])
 
-  // Check access permission
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('allowed_sections')
-    .eq('id', user.id)
-    .single()
-
-  const allowedSections: string[] | null = profile?.allowed_sections ?? null
+  const allowedSections: string[] | null = profileData?.allowed_sections ?? null
   const hasAccess = allowedSections === null || allowedSections.includes('worker-issues')
   if (!hasAccess) {
     return (
@@ -31,24 +28,23 @@ export default async function WorkerKnowledgePage() {
     )
   }
 
-  const workerId = await getWorkerIdByProfileId(user.id)
+  const supabase = await createClient()
 
   const [{ data: tips }, { data: projects }, { data: knowledgeCategories }, { data: rawTagGroups }] = await Promise.all([
     supabase
       .from('knowledge_tips')
+      // Omit knowledge_comments — loaded lazily when card is expanded
       .select(`
-        *,
+        id, worker_id, project_id, title, content, reason, caution, numeric_detail, product_brand,
+        category, category_id, status, tags, image_url, created_at,
         worker:workers(profile:profiles(full_name)),
         project:projects(name),
         knowledge_category:knowledge_categories(id, name, color),
-        knowledge_comments(
-          id, tip_id, worker_id, content, created_at,
-          worker:workers(profile:profiles(full_name))
-        )
+        knowledge_comments(id)
       `)
-      // Show approved tips OR own tips (any status)
       .or(workerId ? `status.eq.approved,worker_id.eq.${workerId}` : 'status.eq.approved')
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .limit(30),
     supabase
       .from('projects')
       .select('id, name')
@@ -114,7 +110,7 @@ export default async function WorkerKnowledgePage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {(tips as KnowledgeTip[]).map(tip => (
+          {(tips as unknown as KnowledgeTip[]).map(tip => (
             <KnowledgeTipCard
               key={tip.id}
               tip={tip}

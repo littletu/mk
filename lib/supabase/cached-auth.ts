@@ -21,6 +21,17 @@ export const getWorkerIdByProfileId = cache(async (profileId: string) => {
   return data?.id ?? null
 })
 
+/** Cached profile allowed_sections — shared by issues + leaderboard pages */
+export const getWorkerProfile = cache(async (profileId: string) => {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('profiles')
+    .select('allowed_sections')
+    .eq('id', profileId)
+    .single()
+  return data
+})
+
 /** Cached knowledge settings — avoids repeated fetches across multiple pages */
 export const getKnowledgeSettings = cache(async () => {
   const supabase = await createClient()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -35,9 +35,28 @@ export function KnowledgeTipCard({ tip, currentWorkerId, tagGroups }: Props) {
   const supabase = createClient()
   const router = useRouter()
   const [expanded, setExpanded] = useState(false)
-  const [comments, setComments] = useState<KnowledgeComment[]>(tip.knowledge_comments ?? [])
+  // Comments are loaded lazily on first expand — initial data only has IDs for count
+  const [comments, setComments] = useState<KnowledgeComment[]>([])
+  const [commentsLoaded, setCommentsLoaded] = useState(false)
+  const [loadingComments, setLoadingComments] = useState(false)
+  const commentCount = commentsLoaded ? comments.length : (tip.knowledge_comments?.length ?? 0)
   const [commentText, setCommentText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!expanded || commentsLoaded) return
+    setLoadingComments(true)
+    supabase
+      .from('knowledge_comments')
+      .select('id, tip_id, worker_id, content, created_at, worker:workers(profile:profiles(full_name))')
+      .eq('tip_id', tip.id)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        setComments(data as KnowledgeComment[] ?? [])
+        setCommentsLoaded(true)
+        setLoadingComments(false)
+      })
+  }, [expanded, commentsLoaded, tip.id, supabase])
 
   // Edit state
   const isOwner = currentWorkerId && tip.worker_id === currentWorkerId
@@ -163,7 +182,7 @@ export function KnowledgeTipCard({ tip, currentWorkerId, tagGroups }: Props) {
               {tip.image_url && <ImageIcon className="w-3.5 h-3.5 text-blue-400" />}
               <span className="flex items-center gap-1">
                 <MessageCircle className="w-3.5 h-3.5" />
-                {comments.length}
+                {commentCount}
               </span>
               {expanded
                 ? <ChevronUp className="w-3.5 h-3.5" />
@@ -272,7 +291,15 @@ export function KnowledgeTipCard({ tip, currentWorkerId, tagGroups }: Props) {
             )}
 
             {/* 留言列表 */}
-            {comments.length > 0 && (
+            {loadingComments && (
+              <div className="px-4 py-3 border-t border-gray-100">
+                <div className="animate-pulse space-y-2">
+                  <div className="h-3 w-20 bg-gray-100 rounded" />
+                  <div className="h-3 w-40 bg-gray-100 rounded" />
+                </div>
+              </div>
+            )}
+            {!loadingComments && comments.length > 0 && (
               <div className="divide-y divide-gray-50 border-t border-gray-100">
                 {comments.map(comment => (
                   <div key={comment.id} className="px-4 py-3">

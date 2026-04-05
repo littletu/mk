@@ -191,7 +191,7 @@ export function WorkerProfileForm({
               onClick={() => fileInputRef.current?.click()}
             >
               {currentAvatarUrl ? (
-                <Image src={currentAvatarUrl} alt="頭像" fill className="object-cover" unoptimized />
+                <Image src={currentAvatarUrl} alt="頭像" fill className="object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400 text-3xl font-bold">
                   {fullName?.[0] ?? '?'}
