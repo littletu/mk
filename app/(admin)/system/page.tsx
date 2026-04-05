@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { CategoryManager } from '@/components/system/CategoryManager'
 import { KnowledgeCategoryManager } from '@/components/system/KnowledgeCategoryManager'
 import { KnowledgeTagManager } from '@/components/system/KnowledgeTagManager'
+import { KnowledgeSettingsManager } from '@/components/system/KnowledgeSettingsManager'
 import { UserManager } from '@/components/system/UserManager'
 import { ProjectTabs } from '@/components/project/ProjectTabs'
 import { Tag, Users } from 'lucide-react'
@@ -11,11 +12,12 @@ export default async function SystemPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: allCategories }, { data: profiles }, { data: knowledgeCategories }, { data: rawTagGroups }] = await Promise.all([
+  const [{ data: allCategories }, { data: profiles }, { data: knowledgeCategories }, { data: rawTagGroups }, { data: knowledgeSettings }] = await Promise.all([
     supabase.from('expense_categories').select('id, name, sort_order, scope').order('sort_order'),
     supabase.from('profiles').select('id, full_name, role, allowed_sections').order('full_name'),
     supabase.from('knowledge_categories').select('id, name, color, points, sort_order').order('sort_order'),
     supabase.from('knowledge_tag_groups').select('id, label, sort_order, knowledge_tags(id, label, sort_order)').order('sort_order'),
+    supabase.from('knowledge_settings').select('comment_points').eq('id', 1).single(),
   ])
 
   const tagGroups: KnowledgeTagGroup[] = (rawTagGroups ?? []).map(g => ({
@@ -51,6 +53,7 @@ export default async function SystemPage() {
 
         {/* Tab 1: 老塞管理 */}
         <div className="space-y-6">
+          <KnowledgeSettingsManager commentPoints={knowledgeSettings?.comment_points ?? 2} />
           <KnowledgeCategoryManager
             categories={knowledgeCategories ?? []}
           />

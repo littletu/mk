@@ -4,7 +4,6 @@ import { Trophy, Lightbulb, MessageCircle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
-import { COMMENT_POINTS } from '@/types'
 
 const RANK_STYLES = [
   'text-yellow-500',   // 1st
@@ -43,7 +42,7 @@ export default async function LeaderboardPage() {
 
   const currentWorkerId = await getWorkerIdByProfileId(user.id)
 
-  const [{ data: workers }, { data: approvedTips }, { data: allComments }] = await Promise.all([
+  const [{ data: workers }, { data: approvedTips }, { data: allComments }, { data: settings }] = await Promise.all([
     supabase
       .from('workers')
       .select('id, profile:profiles(full_name, avatar_url)')
@@ -55,7 +54,14 @@ export default async function LeaderboardPage() {
     supabase
       .from('knowledge_comments')
       .select('worker_id'),
+    supabase
+      .from('knowledge_settings')
+      .select('comment_points')
+      .eq('id', 1)
+      .single(),
   ])
+
+  const commentPoints = settings?.comment_points ?? 2
 
   // Aggregate points per worker
   const leaderboard = (workers ?? [])
@@ -64,15 +70,15 @@ export default async function LeaderboardPage() {
         .filter((t: any) => t.worker_id === w.id)
         .reduce((sum: number, t: any) => sum + (t.knowledge_category?.points ?? 0), 0)
       const commentCount = (allComments ?? []).filter((c: any) => c.worker_id === w.id).length
-      const commentPoints = commentCount * COMMENT_POINTS
+      const workerCommentPoints = commentCount * commentPoints
       const approvedCount = (approvedTips ?? []).filter((t: any) => t.worker_id === w.id).length
       return {
         workerId: w.id,
         fullName: w.profile?.full_name ?? '師傅',
         avatarUrl: w.profile?.avatar_url ?? null,
         tipPoints,
-        commentPoints,
-        totalPoints: tipPoints + commentPoints,
+        commentPoints: workerCommentPoints,
+        totalPoints: tipPoints + workerCommentPoints,
         approvedCount,
         commentCount,
       }
