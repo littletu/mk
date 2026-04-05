@@ -15,7 +15,7 @@ import {
   ClipboardList,
   Settings,
   LogOut,
-  MessageSquareWarning,
+  Lightbulb,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -30,7 +30,7 @@ const navItems = [
   { href: '/expenses',     label: '開銷管理', icon: Receipt,         key: 'expenses' },
   { href: '/invoices',     label: '請款管理', icon: ClipboardList,   key: 'invoices' },
   { href: '/accounting',   label: '帳目總覽',  icon: BookOpen,              key: 'accounting' },
-  { href: '/issues',       label: '問題管理',  icon: MessageSquareWarning,  key: 'issues' },
+  { href: '/issues',       label: '妙根老塞',  icon: Lightbulb,             key: 'issues' },
   { href: '/system',       label: '系統管理',  icon: Settings,              key: 'system' },
 ]
 

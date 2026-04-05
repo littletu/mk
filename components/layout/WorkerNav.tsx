@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ClipboardList, Wallet, UserCircle, ReceiptText, MessageSquareWarning } from 'lucide-react'
+import { ClipboardList, Wallet, UserCircle, ReceiptText, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/worker/work-log', label: '填工時',  icon: ClipboardList },
   { href: '/worker/payroll',  label: '薪資',    icon: Wallet },
   { href: '/worker/receipts', label: '發票',    icon: ReceiptText },
-  { href: '/worker/issues',   label: '回報問題', icon: MessageSquareWarning },
+  { href: '/worker/issues',   label: '妙根老塞', icon: Lightbulb },
   { href: '/worker/profile',  label: '個人資料', icon: UserCircle },
 ]
 

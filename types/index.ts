@@ -1,5 +1,31 @@
 export type UserRole = 'admin' | 'worker'
 
+export type KnowledgeCategory =
+  | 'technique'
+  | 'material'
+  | 'quality'
+  | 'troubleshoot'
+  | 'safety'
+  | 'general'
+
+export const KNOWLEDGE_CATEGORY_LABELS: Record<KnowledgeCategory, string> = {
+  technique:    '施工技巧',
+  material:     '材料知識',
+  quality:      '品質要點',
+  troubleshoot: '問題排解',
+  safety:       '安全注意',
+  general:      '一般分享',
+}
+
+export const KNOWLEDGE_CATEGORY_COLORS: Record<KnowledgeCategory, string> = {
+  technique:    'bg-orange-100 text-orange-700',
+  material:     'bg-blue-100 text-blue-700',
+  quality:      'bg-green-100 text-green-700',
+  troubleshoot: 'bg-red-100 text-red-700',
+  safety:       'bg-yellow-100 text-yellow-700',
+  general:      'bg-gray-100 text-gray-600',
+}
+
 export type ProjectStatus = 'pending' | 'active' | 'completed' | 'cancelled'
 
 export type PayrollStatus = 'draft' | 'confirmed' | 'paid'
@@ -88,6 +114,28 @@ export interface Expense {
   receipt_url: string | null
   created_by: string
   project?: Project
+}
+
+export interface KnowledgeTip {
+  id: string
+  worker_id: string
+  project_id: string | null
+  title: string
+  content: string
+  category: KnowledgeCategory
+  created_at: string
+  worker?: { profile?: { full_name: string } }
+  project?: { name: string } | null
+  knowledge_comments?: KnowledgeComment[]
+}
+
+export interface KnowledgeComment {
+  id: string
+  tip_id: string
+  worker_id: string
+  content: string
+  created_at: string
+  worker?: { profile?: { full_name: string } }
 }
 
 export interface PayrollRecord {

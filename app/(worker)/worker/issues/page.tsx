@@ -1,81 +1,79 @@
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent } from '@/components/ui/card'
-import { IssueForm } from '@/components/forms/IssueForm'
-import { MessageSquareWarning, CheckCircle2, Clock } from 'lucide-react'
+import { getAuthUser, getWorkerIdByProfileId } from '@/lib/supabase/cached-auth'
+import { KnowledgeTipForm } from '@/components/forms/KnowledgeTipForm'
+import { KnowledgeTipCard } from '@/components/knowledge/KnowledgeTipCard'
+import { Lightbulb } from 'lucide-react'
+import type { KnowledgeTip } from '@/types'
 
-function formatDate(s: string) {
-  return new Date(s).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
+export default async function WorkerKnowledgePage() {
+  const user = await getAuthUser()
+  if (!user) return null
 
-export default async function WorkerIssuesPage() {
+  const workerId = await getWorkerIdByProfileId(user.id)
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: worker } = await supabase
-    .from('workers')
-    .select('id')
-    .eq('profile_id', user!.id)
-    .single()
-
-  const { data: issues } = worker
-    ? await supabase
-        .from('issues')
-        .select('*')
-        .eq('worker_id', worker.id)
-        .order('created_at', { ascending: false })
-    : { data: [] }
+  // 並行取得：所有師傅的知識條目（含留言）、所有進行中工程
+  const [{ data: tips }, { data: projects }] = await Promise.all([
+    supabase
+      .from('knowledge_tips')
+      .select(`
+        *,
+        worker:workers(profile:profiles(full_name)),
+        project:projects(name),
+        knowledge_comments(
+          id, tip_id, worker_id, content, created_at,
+          worker:workers(profile:profiles(full_name))
+        )
+      `)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('projects')
+      .select('id, name')
+      .eq('status', 'active')
+      .order('name'),
+  ])
 
   return (
     <div>
+      {/* Header */}
       <div className="mb-5">
-        <h1 className="text-xl font-bold text-gray-900">回報問題</h1>
-        <p className="text-xs text-gray-500 mt-1">有使用問題或建議歡迎回報，管理員會盡快處理</p>
+        <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <Lightbulb className="w-5 h-5 text-orange-500" />
+          妙根老塞
+        </h1>
+        <p className="text-xs text-gray-500 mt-0.5">
+          集結師傅智慧，一起傳承施工好手藝
+        </p>
       </div>
 
-      <IssueForm workerId={worker?.id ?? ''} />
+      {/* 新增老塞表單（可收合） */}
+      {workerId && (
+        <div className="mb-5">
+          <KnowledgeTipForm
+            workerId={workerId}
+            projects={projects ?? []}
+          />
+        </div>
+      )}
 
-      <div className="mt-6">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">我的回報記錄</h2>
-        {!issues?.length ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-10 text-gray-400">
-              <MessageSquareWarning className="w-8 h-8 mb-2 opacity-40" />
-              <p className="text-sm">尚無回報記錄</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {issues.map((issue: any) => (
-              <Card key={issue.id} className="border-gray-100">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{issue.title}</p>
-                      {issue.description && (
-                        <p className="text-xs text-gray-500 mt-1 whitespace-pre-line">{issue.description}</p>
-                      )}
-                      <p className="text-xs text-gray-400 mt-2">{formatDate(issue.created_at)}</p>
-                    </div>
-                    <div className="shrink-0">
-                      {issue.status === 'resolved' ? (
-                        <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          已解決
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-xs font-medium text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full">
-                          <Clock className="w-3.5 h-3.5" />
-                          處理中
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* 知識列表 */}
+      {!tips?.length ? (
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+          <Lightbulb className="w-10 h-10 mb-3 opacity-30" />
+          <p className="text-sm font-medium">還沒有老塞</p>
+          <p className="text-xs mt-1">成為第一個分享的師傅吧！</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {(tips as KnowledgeTip[]).map(tip => (
+            <KnowledgeTipCard
+              key={tip.id}
+              tip={tip}
+              currentWorkerId={workerId ?? ''}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MessageSquareWarning, CheckCircle2, Clock } from 'lucide-react'
-import { IssueStatusToggle } from '@/components/forms/IssueStatusToggle'
+import { Lightbulb, MessageCircle, MapPin, Trash2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import type { KnowledgeTip } from '@/types'
+import { KNOWLEDGE_CATEGORY_LABELS, KNOWLEDGE_CATEGORY_COLORS } from '@/types'
+import { AdminKnowledgeActions } from '@/components/knowledge/AdminKnowledgeActions'
 
 function formatDate(s: string) {
   return new Date(s).toLocaleDateString('zh-TW', {
@@ -10,107 +13,93 @@ function formatDate(s: string) {
   })
 }
 
-export default async function IssuesPage() {
+export default async function AdminKnowledgePage() {
   const supabase = await createClient()
 
-  const { data: issues } = await supabase
-    .from('issues')
-    .select('*, worker:workers(profile:profiles(full_name))')
+  const { data: tips } = await supabase
+    .from('knowledge_tips')
+    .select(`
+      *,
+      worker:workers(profile:profiles(full_name)),
+      project:projects(name),
+      knowledge_comments(id)
+    `)
     .order('created_at', { ascending: false })
 
-  const openIssues = (issues ?? []).filter((i: any) => i.status === 'open')
-  const resolvedIssues = (issues ?? []).filter((i: any) => i.status === 'resolved')
+  const total = tips?.length ?? 0
+  const commentTotal = tips?.reduce((acc: number, t: any) => acc + (t.knowledge_comments?.length ?? 0), 0) ?? 0
 
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">問題管理</h1>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Lightbulb className="w-6 h-6 text-orange-500" />
+            妙根老塞
+          </h1>
           <p className="text-sm text-gray-500 mt-1">
-            待處理 {openIssues.length} 件・已解決 {resolvedIssues.length} 件
+            共 {total} 則老塞・{commentTotal} 則留言
           </p>
         </div>
       </div>
 
-      {/* 待處理 */}
-      <Card className="mb-6">
+      <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Clock className="w-4 h-4 text-orange-500" />
-            待處理
-            {openIssues.length > 0 && (
-              <span className="text-xs font-normal bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
-                {openIssues.length}
-              </span>
-            )}
-          </CardTitle>
+          <CardTitle className="text-base text-gray-700">所有老塞</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {openIssues.length === 0 ? (
-            <p className="text-center text-gray-400 py-8 text-sm">目前沒有待處理的問題 🎉</p>
+          {total === 0 ? (
+            <p className="text-center text-gray-400 py-12 text-sm">
+              師傅們還沒有分享老塞 🤫
+            </p>
           ) : (
             <div className="divide-y divide-gray-50">
-              {openIssues.map((issue: any) => (
-                <IssueRow key={issue.id} issue={issue} formatDate={formatDate} />
-              ))}
+              {(tips as KnowledgeTip[]).map((tip) => {
+                const authorName = tip.worker?.profile?.full_name ?? '—'
+                const categoryLabel = KNOWLEDGE_CATEGORY_LABELS[tip.category] ?? tip.category
+                const categoryColor = KNOWLEDGE_CATEGORY_COLORS[tip.category] ?? 'bg-gray-100 text-gray-600'
+                const commentCount = (tip as any).knowledge_comments?.length ?? 0
+
+                return (
+                  <div key={tip.id} className="px-5 py-4 flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      {/* Meta row */}
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full', categoryColor)}>
+                          {categoryLabel}
+                        </span>
+                        {tip.project && (
+                          <span className="flex items-center gap-0.5 text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                            <MapPin className="w-2.5 h-2.5" />
+                            {tip.project.name}
+                          </span>
+                        )}
+                      </div>
+                      {/* 標題 */}
+                      <p className="text-sm font-semibold text-gray-900">{tip.title}</p>
+                      {/* 內容（截斷） */}
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+                        {tip.content}
+                      </p>
+                      {/* 底部 */}
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-xs text-gray-400">✍️ {authorName}</span>
+                        <span className="text-xs text-gray-400">{formatDate(tip.created_at)}</span>
+                        <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                          <MessageCircle className="w-3 h-3" />
+                          {commentCount}
+                        </span>
+                      </div>
+                    </div>
+                    {/* 刪除按鈕 */}
+                    <AdminKnowledgeActions tipId={tip.id} />
+                  </div>
+                )
+              })}
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* 已解決 */}
-      {resolvedIssues.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2 text-gray-500">
-              <CheckCircle2 className="w-4 h-4 text-green-500" />
-              已解決
-              <span className="text-xs font-normal bg-green-50 text-green-600 px-2 py-0.5 rounded-full">
-                {resolvedIssues.length}
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-gray-50">
-              {resolvedIssues.map((issue: any) => (
-                <IssueRow key={issue.id} issue={issue} formatDate={formatDate} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  )
-}
-
-function IssueRow({ issue, formatDate }: { issue: any; formatDate: (s: string) => string }) {
-  const workerName = issue.worker?.profile?.full_name ?? '—'
-  const resolved = issue.status === 'resolved'
-
-  return (
-    <div className={`px-5 py-4 flex items-start gap-4 ${resolved ? 'opacity-60' : ''}`}>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-            {workerName}
-          </span>
-          <span className="text-xs text-gray-400">{formatDate(issue.created_at)}</span>
-        </div>
-        <p className="text-sm font-semibold text-gray-900">{issue.title}</p>
-        {issue.description && (
-          <p className="text-xs text-gray-500 mt-1 whitespace-pre-line leading-relaxed">
-            {issue.description}
-          </p>
-        )}
-        {resolved && issue.resolved_at && (
-          <p className="text-xs text-green-600 mt-1.5">
-            已於 {formatDate(issue.resolved_at)} 解決
-          </p>
-        )}
-      </div>
-      <div className="shrink-0 pt-0.5">
-        <IssueStatusToggle issueId={issue.id} status={issue.status} />
-      </div>
     </div>
   )
 }
