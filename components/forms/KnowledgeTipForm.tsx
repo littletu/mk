@@ -147,7 +147,7 @@ export function KnowledgeTipForm({ workerId, projects }: Props) {
           <form onSubmit={handleSubmit} className="space-y-3 pb-4">
             {/* 標題 */}
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1 block">標題 *</label>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">碰到的問題或技巧 *</label>
               <Input
                 name="title"
                 value={form.title}
