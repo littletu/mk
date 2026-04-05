@@ -36,6 +36,12 @@ export function KnowledgeTipCard({ tip, currentWorkerId }: Props) {
   const isOwner = currentWorkerId && tip.worker_id === currentWorkerId
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  // Local display copy — updated optimistically after save
+  const [display, setDisplay] = useState({
+    title: tip.title,
+    content: tip.content,
+    reason: tip.reason ?? '',
+  })
   const [editForm, setEditForm] = useState({
     title: tip.title,
     content: tip.content,
@@ -62,6 +68,7 @@ export function KnowledgeTipCard({ tip, currentWorkerId }: Props) {
     setSaving(false)
     if (error) { toast.error('更新失敗：' + error.message); return }
     toast.success('已更新')
+    setDisplay({ title: editForm.title.trim(), content: editForm.content.trim(), reason: editForm.reason.trim() })
     setEditing(false)
     router.refresh()
   }
@@ -115,7 +122,7 @@ export function KnowledgeTipCard({ tip, currentWorkerId }: Props) {
           </div>
 
           {/* 標題 */}
-          <p className="text-sm font-semibold text-gray-900 leading-snug mb-1">{tip.title}</p>
+          <p className="text-sm font-semibold text-gray-900 leading-snug mb-1">{display.title}</p>
 
           {/* 作者 + 展開指示 */}
           <div className="flex items-center justify-between">
@@ -157,7 +164,7 @@ export function KnowledgeTipCard({ tip, currentWorkerId }: Props) {
                     <Check className="w-3.5 h-3.5" />
                     {saving ? '儲存中...' : '儲存'}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => { setEditing(false); setEditForm({ title: tip.title, content: tip.content, reason: tip.reason ?? '' }) }} disabled={saving}>
+                  <Button size="sm" variant="outline" onClick={() => { setEditing(false); setEditForm({ title: display.title, content: display.content, reason: display.reason }) }} disabled={saving}>
                     取消
                   </Button>
                 </div>
@@ -167,7 +174,7 @@ export function KnowledgeTipCard({ tip, currentWorkerId }: Props) {
               <div className="px-4 py-3 bg-amber-50/50 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line flex-1">
-                    {tip.content}
+                    {display.content}
                   </p>
                   {isOwner && (
                     <button
@@ -179,10 +186,10 @@ export function KnowledgeTipCard({ tip, currentWorkerId }: Props) {
                     </button>
                   )}
                 </div>
-                {tip.reason && (
+                {display.reason && (
                   <div className="rounded-lg bg-amber-100/60 px-3 py-2">
                     <p className="text-[10px] font-semibold text-amber-700 mb-0.5">為什麼要這樣做？</p>
-                    <p className="text-xs text-amber-900 leading-relaxed whitespace-pre-line">{tip.reason}</p>
+                    <p className="text-xs text-amber-900 leading-relaxed whitespace-pre-line">{display.reason}</p>
                   </div>
                 )}
                 {tip.image_url && (
