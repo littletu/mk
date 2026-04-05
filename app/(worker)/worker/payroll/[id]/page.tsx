@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAuthUser, getWorkerIdByProfileId } from '@/lib/supabase/cached-auth'
 import { notFound, redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -14,24 +15,21 @@ const statusVariant: Record<string, 'default' | 'secondary' | 'outline'> = {
 
 export default async function WorkerPayrollDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser()
+  if (!user) redirect('/login')
 
-  const { data: worker } = await supabase
-    .from('workers')
-    .select('id, daily_rate, overtime_rate')
-    .eq('profile_id', user!.id)
-    .single()
+  const workerId = await getWorkerIdByProfileId(user.id)
+  if (!workerId) redirect('/worker/payroll')
+
+  const supabase = await createClient()
+
+  // Fetch worker details and payroll record in parallel
+  const [{ data: worker }, { data: record }] = await Promise.all([
+    supabase.from('workers').select('id, daily_rate, overtime_rate').eq('id', workerId).single(),
+    supabase.from('payroll_records').select('*').eq('id', id).eq('worker_id', workerId).single(),
+  ])
 
   if (!worker) redirect('/worker/payroll')
-
-  const { data: record } = await supabase
-    .from('payroll_records')
-    .select('*')
-    .eq('id', id)
-    .eq('worker_id', worker.id)
-    .single()
-
   if (!record) notFound()
 
   const [{ data: entries }, { data: projects }] = await Promise.all([

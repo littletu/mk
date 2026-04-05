@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getAuthUser, getWorkerIdByProfileId } from '@/lib/supabase/cached-auth'
+import { getAuthUser, getWorkerIdByProfileId, getKnowledgeSettings } from '@/lib/supabase/cached-auth'
 import { KnowledgeTipForm } from '@/components/forms/KnowledgeTipForm'
 import { KnowledgeTipCard } from '@/components/knowledge/KnowledgeTipCard'
 import { Lightbulb, Trophy } from 'lucide-react'

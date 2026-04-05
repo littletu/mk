@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getAuthUser, getWorkerIdByProfileId } from '@/lib/supabase/cached-auth'
+import { getAuthUser, getWorkerIdByProfileId, getKnowledgeSettings } from '@/lib/supabase/cached-auth'
 import { WorkerProfileForm } from '@/components/forms/WorkerProfileForm'
 import { Star, Lightbulb, MessageCircle } from 'lucide-react'
 
@@ -14,7 +14,7 @@ export default async function WorkerProfilePage() {
     { data: profile },
     { data: approvedTips },
     { data: comments },
-    { data: settings },
+    { commentPoints: commentPointsPerComment },
   ] = await Promise.all([
     supabase
       .from('profiles')
@@ -34,14 +34,8 @@ export default async function WorkerProfilePage() {
           .select('id')
           .eq('worker_id', workerId)
       : Promise.resolve({ data: [] }),
-    supabase
-      .from('knowledge_settings')
-      .select('comment_points')
-      .eq('id', 1)
-      .single(),
+    getKnowledgeSettings(),
   ])
-
-  const commentPointsPerComment = settings?.comment_points ?? 2
   const tipPoints = (approvedTips ?? []).reduce((sum: number, t: any) => sum + (t.knowledge_category?.points ?? 0), 0)
   const commentPoints = (comments?.length ?? 0) * commentPointsPerComment
   const totalPoints = tipPoints + commentPoints

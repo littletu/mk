@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getAuthUser, getWorkerIdByProfileId } from '@/lib/supabase/cached-auth'
+import { getAuthUser, getWorkerIdByProfileId, getKnowledgeSettings } from '@/lib/supabase/cached-auth'
 import { Trophy, Lightbulb, MessageCircle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -42,7 +42,7 @@ export default async function LeaderboardPage() {
 
   const currentWorkerId = await getWorkerIdByProfileId(user.id)
 
-  const [{ data: workers }, { data: approvedTips }, { data: allComments }, { data: settings }] = await Promise.all([
+  const [{ data: workers }, { data: approvedTips }, { data: allComments }, { commentPoints }] = await Promise.all([
     supabase
       .from('workers')
       .select('id, profile:profiles(full_name, avatar_url)')
@@ -54,14 +54,8 @@ export default async function LeaderboardPage() {
     supabase
       .from('knowledge_comments')
       .select('worker_id'),
-    supabase
-      .from('knowledge_settings')
-      .select('comment_points')
-      .eq('id', 1)
-      .single(),
+    getKnowledgeSettings(),
   ])
-
-  const commentPoints = settings?.comment_points ?? 2
 
   // Aggregate points per worker
   const leaderboard = (workers ?? [])

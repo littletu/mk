@@ -1,18 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAuthUser, getWorkerIdByProfileId } from '@/lib/supabase/cached-auth'
 import { WorkerReceiptForm } from '@/components/forms/WorkerReceiptForm'
 import { todayString } from '@/lib/utils/date'
 
 export default async function WorkerReceiptsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser()
+  if (!user) return null
 
-  const { data: worker } = await supabase
-    .from('workers')
-    .select('id')
-    .eq('profile_id', user!.id)
-    .single()
+  const workerId = await getWorkerIdByProfileId(user.id)
 
-  if (!worker) {
+  if (!workerId) {
     return (
       <div className="text-center py-12 text-gray-500">
         <p>找不到師傅資料，請聯絡管理者。</p>
@@ -20,11 +17,12 @@ export default async function WorkerReceiptsPage() {
     )
   }
 
+  const supabase = await createClient()
   const [{ data: projects }, { data: receipts }, { data: categories }] = await Promise.all([
     supabase.from('projects').select('id, name').eq('status', 'active').order('name'),
     supabase.from('worker_receipts')
       .select('*, project:projects(name)')
-      .eq('worker_id', worker.id)
+      .eq('worker_id', workerId)
       .order('receipt_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(30),
@@ -38,8 +36,8 @@ export default async function WorkerReceiptsPage() {
         <p className="text-sm text-gray-500 mt-0.5">上傳工程相關發票與收據</p>
       </div>
       <WorkerReceiptForm
-        workerId={worker.id}
-        workerProfileId={user!.id}
+        workerId={workerId}
+        workerProfileId={user.id}
         projects={projects ?? []}
         receipts={receipts ?? []}
         categories={categories ?? []}

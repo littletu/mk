@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getAuthUser } from '@/lib/supabase/cached-auth'
+import { getAuthUser, getWorkerIdByProfileId } from '@/lib/supabase/cached-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
@@ -17,20 +17,16 @@ export default async function WorkerPayrollPage() {
   const user = await getAuthUser()
   if (!user) return null
 
+  const workerId = await getWorkerIdByProfileId(user.id)
+  if (!workerId) return <div className="text-center py-12 text-gray-500">找不到師傅資料</div>
+
   const supabase = await createClient()
-  const { data: worker } = await supabase
-    .from('workers')
-    .select('id, daily_rate, overtime_rate')
-    .eq('profile_id', user.id)
-    .single()
+  const [{ data: worker }, { data: records }] = await Promise.all([
+    supabase.from('workers').select('id, daily_rate, overtime_rate').eq('id', workerId).single(),
+    supabase.from('payroll_records').select('*').eq('worker_id', workerId).order('period_start', { ascending: false }),
+  ])
 
   if (!worker) return <div className="text-center py-12 text-gray-500">找不到師傅資料</div>
-
-  const { data: records } = await supabase
-    .from('payroll_records')
-    .select('*')
-    .eq('worker_id', worker.id)
-    .order('period_start', { ascending: false })
 
   return (
     <div>

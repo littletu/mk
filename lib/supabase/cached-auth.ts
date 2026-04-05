@@ -20,3 +20,14 @@ export const getWorkerIdByProfileId = cache(async (profileId: string) => {
     .single()
   return data?.id ?? null
 })
+
+/** Cached knowledge settings — avoids repeated fetches across multiple pages */
+export const getKnowledgeSettings = cache(async () => {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('knowledge_settings')
+    .select('comment_points')
+    .eq('id', 1)
+    .single()
+  return { commentPoints: data?.comment_points ?? 2 }
+})
