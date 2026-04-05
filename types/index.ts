@@ -123,6 +123,7 @@ export interface KnowledgeTip {
   title: string
   content: string
   category: KnowledgeCategory
+  image_url: string | null
   created_at: string
   worker?: { profile?: { full_name: string } }
   project?: { name: string } | null

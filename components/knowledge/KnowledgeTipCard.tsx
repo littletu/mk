@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { MessageCircle, ChevronDown, ChevronUp, MapPin } from 'lucide-react'
+import { MessageCircle, ChevronDown, ChevronUp, MapPin, ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { KnowledgeTip, KnowledgeComment } from '@/types'
 import { KNOWLEDGE_CATEGORY_LABELS, KNOWLEDGE_CATEGORY_COLORS } from '@/types'
@@ -87,12 +87,15 @@ export function KnowledgeTipCard({ tip, currentWorkerId }: Props) {
           {/* 作者 + 展開指示 */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-500">✍️ {authorName}</span>
-            <div className="flex items-center gap-1 text-xs text-gray-400">
-              <MessageCircle className="w-3.5 h-3.5" />
-              {comments.length}
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              {tip.image_url && <ImageIcon className="w-3.5 h-3.5 text-blue-400" />}
+              <span className="flex items-center gap-1">
+                <MessageCircle className="w-3.5 h-3.5" />
+                {comments.length}
+              </span>
               {expanded
-                ? <ChevronUp className="w-3.5 h-3.5 ml-1" />
-                : <ChevronDown className="w-3.5 h-3.5 ml-1" />
+                ? <ChevronUp className="w-3.5 h-3.5" />
+                : <ChevronDown className="w-3.5 h-3.5" />
               }
             </div>
           </div>
@@ -106,6 +109,17 @@ export function KnowledgeTipCard({ tip, currentWorkerId }: Props) {
               <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
                 {tip.content}
               </p>
+              {/* 附圖 */}
+              {tip.image_url && (
+                <a href={tip.image_url} target="_blank" rel="noopener noreferrer" className="block mt-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={tip.image_url}
+                    alt="附圖"
+                    className="w-full rounded-lg border border-amber-100 object-cover max-h-72"
+                  />
+                </a>
+              )}
             </div>
 
             {/* 留言列表 */}

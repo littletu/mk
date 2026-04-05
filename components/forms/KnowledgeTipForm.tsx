@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,28 +8,51 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { Lightbulb, ChevronDown, ChevronUp } from 'lucide-react'
+import { Lightbulb, ChevronDown, ChevronUp, ImagePlus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { KnowledgeCategory } from '@/types'
 import { KNOWLEDGE_CATEGORY_LABELS } from '@/types'
 
-interface Project {
-  id: string
-  name: string
-}
-
-interface Props {
-  workerId: string
-  projects: Project[]
-}
+interface Project { id: string; name: string }
+interface Props { workerId: string; projects: Project[] }
 
 const CATEGORIES = Object.entries(KNOWLEDGE_CATEGORY_LABELS) as [KnowledgeCategory, string][]
+
+async function compressImage(file: File, maxPx = 1920, quality = 0.82): Promise<File> {
+  if (!file.type.startsWith('image/')) return file
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > maxPx || height > maxPx) {
+        if (width > height) { height = Math.round(height * maxPx / width); width = maxPx }
+        else { width = Math.round(width * maxPx / height); height = maxPx }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width; canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        (blob) => resolve(blob
+          ? new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })
+          : file),
+        'image/jpeg', quality
+      )
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
+}
 
 export function KnowledgeTipForm({ workerId, projects }: Props) {
   const supabase = createClient()
   const router = useRouter()
+  const fileRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [form, setForm] = useState({
     title: '',
     content: '',
@@ -37,10 +60,23 @@ export function KnowledgeTipForm({ workerId, projects }: Props) {
     project_id: '',
   })
 
-  function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageFile(file)
+    const reader = new FileReader()
+    reader.onload = ev => setImagePreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  function removeImage() {
+    setImageFile(null)
+    setImagePreview(null)
+    if (fileRef.current) fileRef.current.value = ''
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -50,18 +86,39 @@ export function KnowledgeTipForm({ workerId, projects }: Props) {
     if (!workerId) { toast.error('找不到師傅資料'); return }
 
     setLoading(true)
+
+    // Upload image if attached
+    let image_url: string | null = null
+    if (imageFile) {
+      const compressed = await compressImage(imageFile)
+      const ext = compressed.name.split('.').pop()
+      const path = `knowledge/${workerId}/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('receipts')
+        .upload(path, compressed, { upsert: false })
+      if (uploadError) {
+        toast.error('圖片上傳失敗：' + uploadError.message)
+        setLoading(false)
+        return
+      }
+      const { data: urlData } = supabase.storage.from('receipts').getPublicUrl(path)
+      image_url = urlData.publicUrl
+    }
+
     const { error } = await supabase.from('knowledge_tips').insert({
       worker_id: workerId,
       project_id: form.project_id || null,
       title: form.title.trim(),
       content: form.content.trim(),
       category: form.category,
+      image_url,
     })
 
     if (error) { toast.error('送出失敗：' + error.message); setLoading(false); return }
 
     toast.success('老塞分享成功！感謝師傅的智慧傳承 🎉')
     setForm({ title: '', content: '', category: 'general', project_id: '' })
+    removeImage()
     setOpen(false)
     setLoading(false)
     router.refresh()
@@ -149,6 +206,40 @@ export function KnowledgeTipForm({ workerId, projects }: Props) {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* 圖片上傳 */}
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">附上照片（選填）</label>
+              {imagePreview ? (
+                <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-white">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imagePreview} alt="預覽" className="w-full max-h-48 object-cover" />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute top-2 right-2 p-1 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed border-gray-200 bg-white text-gray-400 hover:border-orange-300 hover:text-orange-400 transition-colors text-sm"
+                >
+                  <ImagePlus className="w-5 h-5" />
+                  點擊上傳照片
+                </button>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+              />
             </div>
 
             <Button type="submit" disabled={loading} className="w-full">
