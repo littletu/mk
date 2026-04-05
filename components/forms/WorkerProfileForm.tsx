@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { Camera } from 'lucide-react'
+import { Camera, Pencil, X } from 'lucide-react'
 import Image from 'next/image'
 import { compressImage } from '@/lib/utils/compress-image'
 
@@ -28,6 +28,18 @@ interface Props {
 }
 
 const selectCls = 'w-full h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="py-2.5 border-b border-gray-100 last:border-0">
+      <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
+      <p className="text-sm text-gray-800">{value || '—'}</p>
+    </div>
+  )
+}
+
+const genderLabel: Record<string, string> = { male: '男', female: '女' }
+const bloodLabel: Record<string, string> = { A: 'A 型', B: 'B 型', O: 'O 型', AB: 'AB 型' }
 
 export function WorkerProfileForm({
   fullName, phone, email, idNumber, birthday, gender,
@@ -54,6 +66,10 @@ export function WorkerProfileForm({
   const [password, setPassword] = useState({ new_password: '', confirm_password: '' })
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [loadingPassword, setLoadingPassword] = useState(false)
+
+  // Edit mode toggles
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [editingPassword, setEditingPassword] = useState(false)
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -115,7 +131,7 @@ export function WorkerProfileForm({
     }).eq('id', user!.id)
 
     if (error) { toast.error('更新失敗：' + error.message) }
-    else { toast.success('資料已更新'); router.refresh() }
+    else { toast.success('資料已更新'); setEditingProfile(false); router.refresh() }
     setLoadingProfile(false)
   }
 
@@ -130,15 +146,42 @@ export function WorkerProfileForm({
     else {
       toast.success('密碼已更新')
       setPassword({ new_password: '', confirm_password: '' })
+      setEditingPassword(false)
     }
     setLoadingPassword(false)
   }
 
   return (
     <div className="space-y-4">
+      {/* ── 基本資料 ── */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">基本資料</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">基本資料</CardTitle>
+            {editingProfile ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingProfile(false)
+                  // reset unsaved changes
+                  setProfile({ full_name: fullName, phone, id_number: idNumber, birthday, gender, blood_type: bloodType, address, mobile, emergency_contact: emergencyContact, emergency_phone: emergencyPhone })
+                }}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3.5 h-3.5" />
+                取消
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditingProfile(true)}
+                className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                編輯
+              </button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {/* Avatar */}
@@ -164,118 +207,170 @@ export function WorkerProfileForm({
               )}
             </div>
             <p className="text-xs text-gray-400 mt-2">點擊更換頭像</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarChange}
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
           </div>
 
-          <form onSubmit={handleProfileSubmit} className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>電子郵件（登入帳號）</Label>
-              <Input value={email} disabled className="bg-gray-50 text-gray-500" />
+          {editingProfile ? (
+            /* ── 編輯模式 ── */
+            <form onSubmit={handleProfileSubmit} className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>電子郵件（登入帳號）</Label>
+                <Input value={email} disabled className="bg-gray-50 text-gray-500" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5 col-span-2">
+                  <Label htmlFor="full_name">姓名 *</Label>
+                  <Input id="full_name" name="full_name" value={profile.full_name} onChange={handleChange} placeholder="姓名" required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="id_number">身分證字號</Label>
+                  <Input id="id_number" name="id_number" value={profile.id_number} onChange={handleChange} placeholder="A123456789" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="birthday">生日</Label>
+                  <Input id="birthday" name="birthday" type="date" value={profile.birthday} onChange={handleChange} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="gender">性別</Label>
+                  <select id="gender" name="gender" value={profile.gender} onChange={handleChange} className={selectCls}>
+                    <option value="">請選擇</option>
+                    <option value="male">男</option>
+                    <option value="female">女</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="blood_type">血型</Label>
+                  <select id="blood_type" name="blood_type" value={profile.blood_type} onChange={handleChange} className={selectCls}>
+                    <option value="">請選擇</option>
+                    <option value="A">A 型</option>
+                    <option value="B">B 型</option>
+                    <option value="O">O 型</option>
+                    <option value="AB">AB 型</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="mobile">手機</Label>
+                  <Input id="mobile" name="mobile" type="tel" value={profile.mobile} onChange={handleChange} placeholder="09xxxxxxxx" />
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                  <Label htmlFor="address">地址</Label>
+                  <Input id="address" name="address" value={profile.address} onChange={handleChange} placeholder="戶籍地址" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="emergency_contact">緊急聯絡人</Label>
+                  <Input id="emergency_contact" name="emergency_contact" value={profile.emergency_contact} onChange={handleChange} placeholder="姓名" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="emergency_phone">緊急聯絡人電話</Label>
+                  <Input id="emergency_phone" name="emergency_phone" type="tel" value={profile.emergency_phone} onChange={handleChange} placeholder="電話" />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <Button type="submit" className="flex-1" disabled={loadingProfile}>
+                  {loadingProfile ? '儲存中...' : '儲存'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditingProfile(false)
+                    setProfile({ full_name: fullName, phone, id_number: idNumber, birthday, gender, blood_type: bloodType, address, mobile, emergency_contact: emergencyContact, emergency_phone: emergencyPhone })
+                  }}
+                  disabled={loadingProfile}
+                >
+                  取消
+                </Button>
+              </div>
+            </form>
+          ) : (
+            /* ── 顯示模式 ── */
+            <div>
+              <InfoRow label="電子郵件" value={email} />
+              <InfoRow label="姓名" value={profile.full_name} />
+              <InfoRow label="身分證字號" value={profile.id_number} />
+              <InfoRow label="生日" value={profile.birthday} />
+              <InfoRow label="性別" value={genderLabel[profile.gender] ?? ''} />
+              <InfoRow label="血型" value={bloodLabel[profile.blood_type] ?? ''} />
+              <InfoRow label="手機" value={profile.mobile} />
+              <InfoRow label="地址" value={profile.address} />
+              <InfoRow label="緊急聯絡人" value={profile.emergency_contact} />
+              <InfoRow label="緊急聯絡人電話" value={profile.emergency_phone} />
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5 col-span-2">
-                <Label htmlFor="full_name">姓名 *</Label>
-                <Input id="full_name" name="full_name" value={profile.full_name} onChange={handleChange} placeholder="姓名" required />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="id_number">身分證字號</Label>
-                <Input id="id_number" name="id_number" value={profile.id_number} onChange={handleChange} placeholder="A123456789" />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="birthday">生日</Label>
-                <Input id="birthday" name="birthday" type="date" value={profile.birthday} onChange={handleChange} />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="gender">性別</Label>
-                <select id="gender" name="gender" value={profile.gender} onChange={handleChange} className={selectCls}>
-                  <option value="">請選擇</option>
-                  <option value="male">男</option>
-                  <option value="female">女</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="blood_type">血型</Label>
-                <select id="blood_type" name="blood_type" value={profile.blood_type} onChange={handleChange} className={selectCls}>
-                  <option value="">請選擇</option>
-                  <option value="A">A 型</option>
-                  <option value="B">B 型</option>
-                  <option value="O">O 型</option>
-                  <option value="AB">AB 型</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="mobile">手機</Label>
-                <Input id="mobile" name="mobile" type="tel" value={profile.mobile} onChange={handleChange} placeholder="09xxxxxxxx" />
-              </div>
-
-              <div className="space-y-1.5 col-span-2">
-                <Label htmlFor="address">地址</Label>
-                <Input id="address" name="address" value={profile.address} onChange={handleChange} placeholder="戶籍地址" />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="emergency_contact">緊急聯絡人</Label>
-                <Input id="emergency_contact" name="emergency_contact" value={profile.emergency_contact} onChange={handleChange} placeholder="姓名" />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="emergency_phone">緊急聯絡人電話</Label>
-                <Input id="emergency_phone" name="emergency_phone" type="tel" value={profile.emergency_phone} onChange={handleChange} placeholder="電話" />
-              </div>
-            </div>
-
-            <Button type="submit" className="w-full" disabled={loadingProfile}>
-              {loadingProfile ? '儲存中...' : '儲存基本資料'}
-            </Button>
-          </form>
+          )}
         </CardContent>
       </Card>
 
+      {/* ── 修改密碼 ── */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">修改密碼</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">修改密碼</CardTitle>
+            {editingPassword ? (
+              <button
+                type="button"
+                onClick={() => { setEditingPassword(false); setPassword({ new_password: '', confirm_password: '' }) }}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3.5 h-3.5" />
+                取消
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditingPassword(true)}
+                className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                編輯
+              </button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handlePasswordSubmit} className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="new_password">新密碼</Label>
-              <Input
-                id="new_password"
-                type="password"
-                value={password.new_password}
-                onChange={e => setPassword(p => ({ ...p, new_password: e.target.value }))}
-                placeholder="至少 6 個字元"
-                minLength={6}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="confirm_password">確認新密碼</Label>
-              <Input
-                id="confirm_password"
-                type="password"
-                value={password.confirm_password}
-                onChange={e => setPassword(p => ({ ...p, confirm_password: e.target.value }))}
-                placeholder="再次輸入新密碼"
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loadingPassword}>
-              {loadingPassword ? '更新中...' : '更新密碼'}
-            </Button>
-          </form>
+          {editingPassword ? (
+            <form onSubmit={handlePasswordSubmit} className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="new_password">新密碼</Label>
+                <Input
+                  id="new_password"
+                  type="password"
+                  value={password.new_password}
+                  onChange={e => setPassword(p => ({ ...p, new_password: e.target.value }))}
+                  placeholder="至少 6 個字元"
+                  minLength={6}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="confirm_password">確認新密碼</Label>
+                <Input
+                  id="confirm_password"
+                  type="password"
+                  value={password.confirm_password}
+                  onChange={e => setPassword(p => ({ ...p, confirm_password: e.target.value }))}
+                  placeholder="再次輸入新密碼"
+                  required
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" className="flex-1" disabled={loadingPassword}>
+                  {loadingPassword ? '更新中...' : '更新密碼'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setEditingPassword(false); setPassword({ new_password: '', confirm_password: '' }) }}
+                  disabled={loadingPassword}
+                >
+                  取消
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <p className="text-sm text-gray-400 py-2">點擊右上角「編輯」來修改密碼</p>
+          )}
         </CardContent>
       </Card>
     </div>
