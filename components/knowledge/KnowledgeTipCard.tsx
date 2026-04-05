@@ -4,9 +4,11 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { MessageCircle, ChevronDown, ChevronUp, MapPin, ImageIcon } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { MessageCircle, ChevronDown, ChevronUp, MapPin, ImageIcon, Pencil, X, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { KnowledgeTip, KnowledgeComment } from '@/types'
 import { KNOWLEDGE_CATEGORY_LABELS, KNOWLEDGE_CATEGORY_COLORS } from '@/types'
@@ -24,14 +26,45 @@ interface Props {
 
 export function KnowledgeTipCard({ tip, currentWorkerId }: Props) {
   const supabase = createClient()
+  const router = useRouter()
   const [expanded, setExpanded] = useState(false)
   const [comments, setComments] = useState<KnowledgeComment[]>(tip.knowledge_comments ?? [])
   const [commentText, setCommentText] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  // Edit state
+  const isOwner = currentWorkerId && tip.worker_id === currentWorkerId
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editForm, setEditForm] = useState({
+    title: tip.title,
+    content: tip.content,
+    reason: tip.reason ?? '',
+  })
+
   const authorName = tip.worker?.profile?.full_name ?? '師傅'
   const categoryLabel = KNOWLEDGE_CATEGORY_LABELS[tip.category] ?? tip.category
   const categoryColor = KNOWLEDGE_CATEGORY_COLORS[tip.category] ?? 'bg-gray-100 text-gray-600'
+
+  function handleEditChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    setEditForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  async function handleSave() {
+    if (!editForm.title.trim()) { toast.error('請填寫標題'); return }
+    if (!editForm.content.trim()) { toast.error('請填寫內容'); return }
+    setSaving(true)
+    const { error } = await supabase.from('knowledge_tips').update({
+      title: editForm.title.trim(),
+      content: editForm.content.trim(),
+      reason: editForm.reason.trim() || null,
+    }).eq('id', tip.id)
+    setSaving(false)
+    if (error) { toast.error('更新失敗：' + error.message); return }
+    toast.success('已更新')
+    setEditing(false)
+    router.refresh()
+  }
 
   async function handleComment(e: React.FormEvent) {
     e.preventDefault()
@@ -64,7 +97,7 @@ export function KnowledgeTipCard({ tip, currentWorkerId }: Props) {
         {/* 主體區塊 */}
         <button
           type="button"
-          onClick={() => setExpanded(v => !v)}
+          onClick={() => { if (!editing) setExpanded(v => !v) }}
           className="w-full text-left px-4 pt-4 pb-3"
         >
           {/* 頂部 meta */}
@@ -104,29 +137,66 @@ export function KnowledgeTipCard({ tip, currentWorkerId }: Props) {
         {/* 展開區：完整內容 + 留言 */}
         {expanded && (
           <div className="border-t border-gray-100">
-            {/* 完整內容 */}
-            <div className="px-4 py-3 bg-amber-50/50 space-y-3">
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
-                {tip.content}
-              </p>
-              {tip.reason && (
-                <div className="rounded-lg bg-amber-100/60 px-3 py-2">
-                  <p className="text-[10px] font-semibold text-amber-700 mb-0.5">為什麼要這樣做？</p>
-                  <p className="text-xs text-amber-900 leading-relaxed whitespace-pre-line">{tip.reason}</p>
+            {editing ? (
+              /* ── 編輯表單 ── */
+              <div className="px-4 py-3 bg-orange-50/50 space-y-3">
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-500 mb-1 block">碰到的問題或技巧</label>
+                  <Input name="title" value={editForm.title} onChange={handleEditChange} className="text-sm bg-white" />
                 </div>
-              )}
-              {/* 附圖 */}
-              {tip.image_url && (
-                <a href={tip.image_url} target="_blank" rel="noopener noreferrer" className="block mt-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={tip.image_url}
-                    alt="附圖"
-                    className="w-full rounded-lg border border-amber-100 object-cover max-h-72"
-                  />
-                </a>
-              )}
-            </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-500 mb-1 block">你的做法或建議</label>
+                  <Textarea name="content" value={editForm.content} onChange={handleEditChange} rows={3} className="text-sm bg-white resize-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-500 mb-1 block">為什麼要這樣做？</label>
+                  <Textarea name="reason" value={editForm.reason} onChange={handleEditChange} rows={2} className="text-sm bg-white resize-none" />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleSave} disabled={saving} className="flex-1 gap-1.5">
+                    <Check className="w-3.5 h-3.5" />
+                    {saving ? '儲存中...' : '儲存'}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { setEditing(false); setEditForm({ title: tip.title, content: tip.content, reason: tip.reason ?? '' }) }} disabled={saving}>
+                    取消
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* ── 內容顯示 ── */
+              <div className="px-4 py-3 bg-amber-50/50 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line flex-1">
+                    {tip.content}
+                  </p>
+                  {isOwner && (
+                    <button
+                      onClick={e => { e.stopPropagation(); setEditing(true) }}
+                      className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-100 transition-colors"
+                      title="編輯"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                {tip.reason && (
+                  <div className="rounded-lg bg-amber-100/60 px-3 py-2">
+                    <p className="text-[10px] font-semibold text-amber-700 mb-0.5">為什麼要這樣做？</p>
+                    <p className="text-xs text-amber-900 leading-relaxed whitespace-pre-line">{tip.reason}</p>
+                  </div>
+                )}
+                {tip.image_url && (
+                  <a href={tip.image_url} target="_blank" rel="noopener noreferrer" className="block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={tip.image_url}
+                      alt="附圖"
+                      className="w-full rounded-lg border border-amber-100 object-cover max-h-72"
+                    />
+                  </a>
+                )}
+              </div>
+            )}
 
             {/* 留言列表 */}
             {comments.length > 0 && (
