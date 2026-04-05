@@ -98,6 +98,16 @@ export default async function AdminKnowledgePage() {
                             💡 {tip.reason}
                           </p>
                         )}
+                        {tip.image_url && (
+                          <a href={tip.image_url} target="_blank" rel="noopener noreferrer" className="inline-block mt-2">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={tip.image_url}
+                              alt="附圖"
+                              className="h-32 w-auto rounded-lg border border-gray-200 object-cover"
+                            />
+                          </a>
+                        )}
                         {/* 底部 */}
                         <div className="flex items-center gap-3 mt-2">
                           <span className="text-xs text-gray-400">✍️ {authorName}</span>
