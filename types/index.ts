@@ -193,6 +193,32 @@ export interface KnowledgeComment {
   worker?: { profile?: { full_name: string } }
 }
 
+export interface KnowledgeQuestion {
+  id: string
+  worker_id: string
+  project_id: string | null
+  category_id: string | null
+  title: string
+  content: string | null
+  image_url: string | null
+  status: 'open' | 'resolved'
+  created_at: string
+  worker?: { profile?: { full_name: string } }
+  project?: { name: string } | null
+  knowledge_category?: { id: string; name: string; color: string } | null
+  knowledge_question_replies?: KnowledgeQuestionReply[]
+}
+
+export interface KnowledgeQuestionReply {
+  id: string
+  question_id: string
+  worker_id: string
+  content: string
+  image_url: string | null
+  created_at: string
+  worker?: { profile?: { full_name: string } }
+}
+
 export interface PayrollRecord {
   id: string
   worker_id: string
