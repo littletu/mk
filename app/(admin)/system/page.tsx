@@ -17,7 +17,7 @@ export default async function SystemPage() {
     supabase.from('profiles').select('id, full_name, role, allowed_sections').order('full_name'),
     supabase.from('knowledge_categories').select('id, name, color, points, sort_order').order('sort_order'),
     supabase.from('knowledge_tag_groups').select('id, label, sort_order, knowledge_tags(id, label, sort_order)').order('sort_order'),
-    supabase.from('knowledge_settings').select('comment_points').eq('id', 1).single(),
+    supabase.from('knowledge_settings').select('comment_points, question_points, reply_points').eq('id', 1).single(),
   ])
 
   const tagGroups: KnowledgeTagGroup[] = (rawTagGroups ?? []).map(g => ({
@@ -53,7 +53,11 @@ export default async function SystemPage() {
 
         {/* Tab 1: 老塞管理 */}
         <div className="space-y-6">
-          <KnowledgeSettingsManager commentPoints={knowledgeSettings?.comment_points ?? 2} />
+          <KnowledgeSettingsManager
+            commentPoints={knowledgeSettings?.comment_points ?? 2}
+            questionPoints={(knowledgeSettings as any)?.question_points ?? 3}
+            replyPoints={(knowledgeSettings as any)?.reply_points ?? 2}
+          />
           <KnowledgeCategoryManager
             categories={knowledgeCategories ?? []}
           />

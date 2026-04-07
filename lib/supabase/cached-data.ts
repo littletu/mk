@@ -46,8 +46,12 @@ export const getCachedKnowledgeSettings = cache(async () => {
   const supabase = await createClient()
   const { data } = await supabase
     .from('knowledge_settings')
-    .select('comment_points')
+    .select('comment_points, question_points, reply_points')
     .eq('id', 1)
     .single()
-  return { commentPoints: data?.comment_points ?? 2 }
+  return {
+    commentPoints:  data?.comment_points  ?? 2,
+    questionPoints: (data as any)?.question_points ?? 3,
+    replyPoints:    (data as any)?.reply_points    ?? 2,
+  }
 })
