@@ -432,7 +432,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                   inputMode="decimal"
                 />
                 <div className="flex gap-1.5">
-                  {[{v: 1, label: '1天'}, {v: 0.5, label: '0.5天'}, {v: -0.5, label: '-0.5'}, {v: -1, label: '-1'}].map(({v, label}) => (
+                  {[{v: 1, label: '1工'}, {v: 0.5, label: '0.5工'}, {v: -0.5, label: '-0.5'}, {v: -1, label: '-1'}].map(({v, label}) => (
                     <button
                       key={label}
                       type="button"
