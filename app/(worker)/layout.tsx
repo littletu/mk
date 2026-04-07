@@ -19,11 +19,11 @@ export default async function WorkerLayout({ children }: { children: React.React
   if (profile?.role === 'admin') redirect('/dashboard')
 
   return (
-    <div className="flex flex-col min-h-full bg-gray-50">
+    <div className="flex flex-col min-h-full bg-gray-50 worker-ui">
       <WorkerHeader fullName={profile?.full_name ?? ''} />
 
       {/* Content */}
-      <main className="flex-1 px-4 py-4 pb-24 max-w-lg mx-auto w-full">
+      <main className="flex-1 px-4 py-4 pb-28 max-w-lg mx-auto w-full">
         {children}
       </main>
 

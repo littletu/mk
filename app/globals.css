@@ -137,3 +137,12 @@
     touch-action: manipulation;
   }
 }
+
+/* Worker UI: bump all text up one size for elderly users */
+.worker-ui .text-xs   { font-size: 0.875rem;  line-height: 1.25rem; }   /* xs  → sm   */
+.worker-ui .text-sm   { font-size: 1rem;       line-height: 1.5rem;  }   /* sm  → base */
+.worker-ui .text-base { font-size: 1.125rem;   line-height: 1.75rem; }   /* base → lg  */
+.worker-ui .text-lg   { font-size: 1.25rem;    line-height: 1.75rem; }   /* lg  → xl   */
+.worker-ui .text-xl   { font-size: 1.5rem;     line-height: 2rem;    }   /* xl  → 2xl  */
+.worker-ui .text-2xl  { font-size: 1.875rem;   line-height: 2.25rem; }   /* 2xl → 3xl  */
+.worker-ui .text-3xl  { font-size: 2.25rem;    line-height: 2.5rem;  }   /* 3xl → 4xl  */

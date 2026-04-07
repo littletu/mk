@@ -327,11 +327,11 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
               <div className="flex justify-between items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-gray-900">{entry.project?.name ?? '工程'}</p>
-                  <p className="text-xs text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600 mt-1">
                     工作 {entry.regular_days}天 ／ 加班 {entry.overtime_hours}h
                   </p>
                   {entry.work_progress && (
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">📝 {entry.work_progress}</p>
+                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">📝 {entry.work_progress}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -439,7 +439,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                       key={label}
                       type="button"
                       onClick={() => setForm(p => ({ ...p, regular_days: String(Math.max(0, (parseFloat(p.regular_days) || 0) + v)) }))}
-                      className={`flex-1 text-xs py-1 rounded-md font-medium transition-colors ${v > 0 ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                      className={`flex-1 text-sm py-2 rounded-md font-medium transition-colors ${v > 0 ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                     >
                       {label}
                     </button>
@@ -465,7 +465,7 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                       key={label}
                       type="button"
                       onClick={() => setForm(p => ({ ...p, overtime_hours: String(Math.max(0, (parseFloat(p.overtime_hours) || 0) + v)) }))}
-                      className={`flex-1 text-xs py-1 rounded-md font-medium transition-colors ${v > 0 ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                      className={`flex-1 text-sm py-2 rounded-md font-medium transition-colors ${v > 0 ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                     >
                       {label}
                     </button>

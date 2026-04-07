@@ -15,15 +15,15 @@ export function WorkerHeader({ fullName }: { fullName: string }) {
   }
 
   return (
-    <header className="bg-gray-900 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+    <header className="bg-gray-900 text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-10">
       <div className="flex items-center gap-2">
-        <span className="font-bold text-sm">妙根塗裝</span>
+        <span className="font-bold text-base">妙根塗裝</span>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-300">{fullName}</span>
+        <span className="text-base text-gray-300">{fullName}</span>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
         >
           <LogOut className="w-4 h-4" />
           登出

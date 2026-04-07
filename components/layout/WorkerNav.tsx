@@ -34,7 +34,7 @@ export function WorkerNav({ allowedSections }: Props) {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-10">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-10 safe-area-inset-bottom">
       {visibleItems.map(({ href, label, icon: Icon }) => {
         const active = pathname.startsWith(href)
         return (
@@ -43,12 +43,12 @@ export function WorkerNav({ allowedSections }: Props) {
             href={href}
             prefetch={true}
             className={cn(
-              'flex-1 flex flex-col items-center py-3 gap-1 text-xs transition-colors active:scale-90 active:opacity-70',
+              'flex-1 flex flex-col items-center py-3.5 gap-1.5 text-xs transition-colors active:scale-90 active:opacity-70',
               active ? 'text-orange-500' : 'text-gray-500'
             )}
           >
-            <Icon className={cn('w-5 h-5 transition-transform', active && 'scale-110')} />
-            <span className={cn('transition-colors', active && 'font-medium')}>{label}</span>
+            <Icon className={cn('w-6 h-6 transition-transform', active && 'scale-110')} />
+            <span className={cn('text-[13px] transition-colors', active && 'font-semibold')}>{label}</span>
           </Link>
         )
       })}
