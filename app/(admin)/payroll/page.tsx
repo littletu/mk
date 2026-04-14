@@ -32,11 +32,13 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
     .eq('is_active', true) as { data: Array<{ id: string; daily_rate: number; overtime_rate: number; profile: any }> | null }
 
   // Load payroll records for this month
+  // Use period_start bounds only (avoids invalid dates like 2025-04-31)
+  const nextMonth = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`
   const { data: records } = await supabase
     .from('payroll_records')
     .select('*')
     .gte('period_start', `${year}-${String(month).padStart(2, '0')}-01`)
-    .lte('period_end', `${year}-${String(month).padStart(2, '0')}-31`)
+    .lt('period_start', nextMonth)
 
   // recordMap not used directly; lookup via find below
 
