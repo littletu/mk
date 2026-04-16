@@ -345,8 +345,9 @@ export function WorkLogForm({ workerId, projects, todayEntries, today }: Props) 
                   <button
                     onClick={async () => {
                       if (!confirm('確定要刪除這筆工時記錄？')) return
-                      const { error } = await supabase.from('time_entries').delete().eq('id', entry.id)
+                      const { error, count } = await supabase.from('time_entries').delete({ count: 'exact' }).eq('id', entry.id)
                       if (error) { toast.error('刪除失敗：' + error.message); return }
+                      if (count === 0) { toast.error('刪除失敗：沒有權限或記錄不存在'); return }
                       toast.success('已刪除')
                       // Optimistic update: remove from local state immediately
                       const remaining = dateEntries.filter(e => e.id !== entry.id)
