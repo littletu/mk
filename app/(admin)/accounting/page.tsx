@@ -129,10 +129,10 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
       .gte('payment_date', trendStart)
       .lte('payment_date', trendEnd),
     supabase.from('payroll_records')
-      .select('net_amount, period_start')
+      .select('net_amount, period_end')
       .in('status', ['confirmed', 'paid'])
-      .gte('period_start', trendStart)
-      .lte('period_start', trendEnd),
+      .gte('period_end', trendStart)
+      .lte('period_end', trendEnd),
     supabase.from('expenses')
       .select('amount, date')
       .gte('date', trendStart)
@@ -185,7 +185,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
     const t = trendMap.get(monthKey(p.payment_date)); if (t) t.income += p.amount || 0
   }
   for (const r of (trendPayrolls ?? []) as any[]) {
-    const t = trendMap.get(monthKey(r.period_start)); if (t) t.expense += r.net_amount || 0
+    const t = trendMap.get(monthKey(r.period_end)); if (t) t.expense += r.net_amount || 0
   }
   for (const e of (trendExpenses ?? []) as any[]) {
     const t = trendMap.get(monthKey(e.date)); if (t) t.expense += e.amount || 0
