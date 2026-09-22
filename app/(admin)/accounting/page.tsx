@@ -74,7 +74,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
     { data: expenses },
     { data: workerReceipts },
     { data: trendPayments },
-    { data: trendPayrolls },
+    { data: trendTimeEntries },
     { data: trendExpenses },
     { data: trendReceipts },
     { data: allProjects },
@@ -128,11 +128,10 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
       .select('amount, payment_date')
       .gte('payment_date', trendStart)
       .lte('payment_date', trendEnd),
-    supabase.from('payroll_records')
-      .select('net_amount, period_end')
-      .in('status', ['confirmed', 'paid'])
-      .gte('period_end', trendStart)
-      .lte('period_end', trendEnd),
+    supabase.from('time_entries')
+      .select('worker_id, regular_days, overtime_hours, transportation_fee, meal_fee, advance_payment, subsidy, other_fee, work_date')
+      .gte('work_date', trendStart)
+      .lte('work_date', trendEnd),
     supabase.from('expenses')
       .select('amount, date')
       .gte('date', trendStart)
@@ -184,8 +183,18 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
   for (const p of (trendPayments ?? []) as any[]) {
     const t = trendMap.get(monthKey(p.payment_date)); if (t) t.income += p.amount || 0
   }
-  for (const r of (trendPayrolls ?? []) as any[]) {
-    const t = trendMap.get(monthKey(r.period_end)); if (t) t.expense += r.net_amount || 0
+  for (const e of (trendTimeEntries ?? []) as any[]) {
+    const t = trendMap.get(monthKey(e.work_date))
+    if (!t) continue
+    const rate = rates.get(e.worker_id)
+    t.expense +=
+      (e.regular_days ?? 0) * (rate?.daily_rate ?? 0) +
+      (e.overtime_hours ?? 0) * (rate?.overtime_rate ?? 0) +
+      (e.transportation_fee ?? 0) +
+      (e.meal_fee ?? 0) +
+      (e.advance_payment ?? 0) +
+      (e.subsidy ?? 0) +
+      (e.other_fee ?? 0)
   }
   for (const e of (trendExpenses ?? []) as any[]) {
     const t = trendMap.get(monthKey(e.date)); if (t) t.expense += e.amount || 0
